@@ -3,397 +3,130 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Minecraft Addon Pack Injector (BH/RS)</title>
-  <meta name="theme-color" content="#0b0b1a" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <title>Purple Shop UUID Injector</title>
   <style>
     :root{
       --bg:#0b0b1a; --panel:#111327; --soft:#0d1022; --text:#e9e9f2; --muted:#9aa0b3;
-      --accent:#8b5cf6; --accent-2:#a78bfa; --ok:#10b981; --err:#ef4444; --code:#0b1224;
+      --accent:#8b5cf6; --accent-2:#3b82f6;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    *{box-sizing:border-box;margin:0;padding:0}
     body{
-      margin:0;
-      color:var(--text);
-      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Noto Sans",Arial;
-      background:
-        radial-gradient(1200px 600px at 10% 0%, rgba(139,92,246,.15), transparent 50%),
-        radial-gradient(1200px 700px at 90% 100%, rgba(55,48,163,.12), transparent 50%),
-        linear-gradient(180deg, #0b0b1a 0%, #0c0d20 100%);
-      overflow-x:hidden;
-    }
-    .frame {
-      position: fixed; inset: 0; pointer-events:none;
-    }
-    .frame::before, .frame::after{
-      content:""; position:absolute; top:0; bottom:0; width:14px;
-      background:
-        linear-gradient(180deg, rgba(167,139,250,.0), rgba(167,139,250,.35) 40%, rgba(139,92,246,.45), rgba(167,139,250,.2) 60%, rgba(167,139,250,.0));
-      filter: blur(2px);
-      animation: glow 3.6s linear infinite;
-    }
-    .frame::before{ left:18px }
-    .frame::after{ right:18px; animation-delay:1.2s }
-    @keyframes glow{
-      0%{ opacity:.35 } 50%{ opacity:.85 } 100%{ opacity:.35 }
+      font-family: "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height:100vh;
+      display:flex;flex-direction:column;
     }
 
-    .wrap{max-width:1100px;margin:0 auto;padding:28px}
-    header.hero{
-      display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;
-      padding:16px 8px 8px;
-    }
-    .title{font-size:28px; font-weight:800; letter-spacing:.4px}
-    .subtitle{color:var(--muted); margin-top:4px}
-
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)) , var(--panel);
-      border:1px solid rgba(167,139,250,.25);
-      border-radius:20px;
-      box-shadow:0 20px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
-      overflow:hidden;
-    }
-    .row{display:flex; gap:16px; flex-wrap:wrap}
-    .grow{flex:1}
-
-    .drop{
-      margin:16px; padding:20px; border-radius:16px;
-      background:var(--soft);
-      border:2px dashed rgba(167,139,250,.35);
+    /* แถบด้านบน */
+    .banner{
+      width:100%;
+      padding:16px;
       text-align:center;
-      transition:.15s border-color, .15s background;
-    }
-    .drop.drag{ border-color:var(--accent); background:#0f1131 }
-    .hint{font-size:12px; color:var(--muted)}
-
-    .btn{
-      appearance:none; border:none; cursor:pointer;
-      padding:10px 14px; border-radius:12px; font-weight:600;
-      background:linear-gradient(180deg, var(--accent), var(--accent-2));
-      color:white; box-shadow:0 8px 20px rgba(139,92,246,.35);
-      transition: transform .05s ease-in-out;
-    }
-    .btn:active{ transform: translateY(1px) }
-    .btn.secondary{
-      background:#1b1f3a; color:#e9e9f2; box-shadow:none; border:1px solid rgba(167,139,250,.25);
-    }
-    .toolbar{
-      display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid rgba(167,139,250,.18);
-      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+      font-size:28px;
+      font-weight:900;
+      text-transform:uppercase;
+      background:linear-gradient(90deg, var(--accent), var(--accent-2));
+      color:transparent;
+      -webkit-background-clip:text;
+      background-clip:text;
+      letter-spacing:1px;
+      text-shadow:0 2px 6px rgba(0,0,0,.6);
     }
 
-    .cols{ display:grid; grid-template-columns:1fr; gap:16px; padding:16px }
-    @media (min-width:900px){ .cols{ grid-template-columns:1fr 1fr } }
-
-    .panel{
-      border:1px solid rgba(167,139,250,.22);
-      border-radius:16px; overflow:hidden;
-      background:linear-gradient(180deg, rgba(255,255,255,.015), rgba(255,255,255,0)) , #0f1229;
-    }
-    .panel header{
-      padding:10px 14px; display:flex; align-items:center; justify-content:space-between;
-      background:linear-gradient(180deg, rgba(167,139,250,.12), rgba(167,139,250,.04));
-      border-bottom:1px solid rgba(167,139,250,.18);
-    }
-    .panel h3{ margin:0; font-size:16px; letter-spacing:.3px }
-    .panel .body{ padding:12px }
-    pre{
-      margin:0; padding:14px; background:var(--code); border-radius:12px; overflow:auto;
-      border:1px solid #1d2544; font-size:13px; line-height:1.45; color:#e6f3ff;
-      box-shadow: inset 0 0 24px rgba(23,24,60,.5);
-    }
-    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
-
-    .log{ padding:12px 16px; border-top:1px dashed rgba(167,139,250,.22); color:#c9d3ff; background:#0d1130 }
-    .log .ok{ color:var(--ok) } .log .err{ color:var(--err) }
-
-    .list{
-      padding:10px 16px; border-top:1px solid rgba(167,139,250,.15);
-      max-height:260px; overflow:auto; background:linear-gradient(180deg, rgba(255,255,255,.01), transparent);
-    }
-    .item{ display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(167,139,250,.12)}
-    .badge{ font-variant-numeric: tabular-nums; padding:2px 8px; border-radius:999px; background:#14183a; border:1px solid rgba(167,139,250,.25); color:#cbd5ff }
-
-    .fade-in{ animation: fade .2s ease-out }
-    @keyframes fade{ from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
+    .wrap{max-width:960px;margin:0 auto;padding:24px;flex:1;width:100%}
+    .card{background:var(--panel);border-radius:20px;padding:20px;margin-top:16px}
+    .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+    .btn:active{transform:scale(.97)}
+    .drop{margin-top:12px;padding:20px;border:2px dashed var(--accent);border-radius:14px;text-align:center}
+    .list{margin-top:16px}
+    pre{background:#0d1130;padding:12px;border-radius:10px;overflow:auto;font-size:13px}
   </style>
 </head>
 <body>
-  <div class="frame"></div>
+  <div class="banner">💜💙 Purple Shop ไงไอสัส</div>
 
   <div class="wrap">
-    <header class="hero">
-      <div>
-        <div class="title">🧩 Addon Injector Helper — <span style="color:var(--accent)">BH/RS</span></div>
-        <div class="subtitle">อัปโหลดหลายแอดออน → ดึง UUID/Version จาก <code>manifest.json</code> → พิมพ์โค้ดสำหรับ <b>world_behavior_packs.json</b> และ <b>world_resource_packs.json</b> ให้อัตโนมัติ</div>
-      </div>
-      <div class="row">
-        <button class="btn secondary" id="btnClear">ล้างผลลัพธ์</button>
-        <button class="btn" id="btnPick">เลือกไฟล์…</button>
-        <input id="file" type="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json"/>
-      </div>
-    </header>
-
-    <section class="card">
+    <div class="card">
+      <h2>อัปโหลด Addon manifest.json หรือ .mcpack/.mcaddon</h2>
       <div class="drop" id="drop">
-        <div style="font-size:18px; font-weight:800; letter-spacing:.3px">ลากไฟล์มาวางที่นี่</div>
-        <div class="hint" style="margin-top:6px">
-          รองรับ .zip / .mcpack / .mcaddon / manifest.json (หลายไฟล์พร้อมกัน) • ระบบจะค้นหา <code>manifest.json</code> ข้างในให้อัตโนมัติ
-        </div>
+        ลากไฟล์มาปล่อยตรงนี้ หรือ <button class="btn" id="pick">เลือกไฟล์</button>
+        <input type="file" id="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json">
       </div>
-
       <div class="list" id="list"></div>
-
-      <div class="cols">
-        <div class="panel">
-          <header>
-            <h3>world_behavior_packs.json</h3>
-            <div class="row">
-              <button class="btn secondary" id="copyBH">คัดลอก</button>
-              <button class="btn secondary" id="downloadBH">ดาวน์โหลด</button>
-            </div>
-          </header>
-          <div class="body">
-            <pre class="fade-in"><code id="outBH">[]</code></pre>
-          </div>
-        </div>
-        <div class="panel">
-          <header>
-            <h3>world_resource_packs.json</h3>
-            <div class="row">
-              <button class="btn secondary" id="copyRS">คัดลอก</button>
-              <button class="btn secondary" id="downloadRS">ดาวน์โหลด</button>
-            </div>
-          </header>
-          <div class="body">
-            <pre class="fade-in"><code id="outRS">[]</code></pre>
-          </div>
-        </div>
-      </div>
-
-      <div class="toolbar">
-        <span class="hint">Tip: คลิก “คัดลอก” เพื่อเอาไปวางในไฟล์โลกได้ทันที • เรียงตามชื่อแพ็ก (รองรับไทย) → เวอร์ชันมาก→น้อย</span>
-      </div>
-
-      <div class="log" id="log">พร้อมทำงาน ✨</div>
-    </section>
+      <h3>world_behavior_packs.json</h3>
+      <pre id="outBH">[]</pre>
+      <h3>world_resource_packs.json</h3>
+      <pre id="outRS">[]</pre>
+    </div>
   </div>
 
-  <!-- JSZip -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
-    const drop = document.getElementById('drop');
-    const input = document.getElementById('file');
-    const pick = document.getElementById('btnPick');
-    const clearBtn = document.getElementById('btnClear');
-    const logEl = document.getElementById('log');
-    const listEl = document.getElementById('list');
+    const drop=document.getElementById('drop');
+    const input=document.getElementById('file');
+    const pick=document.getElementById('pick');
+    const outBH=document.getElementById('outBH');
+    const outRS=document.getElementById('outRS');
+    const list=document.getElementById('list');
+    const BH=new Map(), RS=new Map();
 
-    const outBH = document.getElementById('outBH');
-    const outRS = document.getElementById('outRS');
+    pick.onclick=()=>input.click();
+    input.onchange=()=>handleFiles(input.files);
 
-    const copyBH = document.getElementById('copyBH');
-    const copyRS = document.getElementById('copyRS');
-    const dlBH = document.getElementById('downloadBH');
-    const dlRS = document.getElementById('downloadRS');
-
-    // store by pack_id (avoid duplicates)
-    const BH = new Map(); // {pack_id,version,name,from}
-    const RS = new Map();
-
-    function log(msg, cls){
-      logEl.innerHTML = (cls==='err' ? '❌ ' : cls==='ok' ? '✅ ' : '• ') + msg;
-      if (cls) logEl.className = 'log ' + cls;
-      else logEl.className = 'log';
-    }
-
-    function decodeUnicodeEscapes(str){
-      try { return /\\u[0-9a-fA-F]{4}/.test(str) ? str.replace(/\\u([0-9a-fA-F]{4})/g, (_,g1)=>String.fromCharCode(parseInt(g1,16))) : str; }
-      catch { return str; }
-    }
-
-    function addItemLine({name, pack_id, version, from, type}){
-      const line = document.createElement('div');
-      line.className = 'item fade-in';
-      line.innerHTML = `
-        <span class="badge">${type}</span>
-        <div class="grow">
-          <div style="font-weight:700">${decodeUnicodeEscapes(name||'(ไม่ระบุ)')}</div>
-          <div class="hint">UUID: <code>${pack_id}</code> • version: <code>[${version.join(', ')}]</code> • <span>${from}</span></div>
-        </div>
-      `;
-      listEl.appendChild(line);
-    }
+    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.style.background='#1a1b3d'}));
+    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.style.background=''}));
+    drop.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
 
     function prettySort(arr){
-      arr.sort((a,b)=>{
-        const nameCmp = (a.name||'').toString().localeCompare((b.name||'').toString(),'th');
-        if (nameCmp!==0) return nameCmp;
-        const av=a.version||[], bv=b.version||[];
-        for(let i=0;i<Math.max(av.length,bv.length);i++){
-          const ai=av[i]??0, bi=bv[i]??0;
-          if (ai!==bi) return bi-ai;
-        }
-        return a.pack_id.localeCompare(b.pack_id);
+      return arr.sort((a,b)=>{
+        const n=(a.name||'').localeCompare(b.name||'', 'th');
+        if(n!==0) return n;
+        return b.version.join('.').localeCompare(a.version.join('.'));
       });
-      return arr;
     }
-
-    function toArray(map){ return Array.from(map.values()); }
-
-    async function typeOut(el, text){
-      // “ค่อยๆ พิมพ์” แบบเรียลไทม์
-      el.textContent = '';
-      const delay = 6; // ms ต่อ char
-      for (let i=0;i<text.length;i++){
-        el.textContent += text[i];
-        if (i % 4 === 0) await new Promise(r=>setTimeout(r, delay));
-      }
+    function updateOutputs(){
+      const bh=prettySort([...BH.values()]).map(x=>({pack_id:x.pack_id,version:x.version}));
+      const rs=prettySort([...RS.values()]).map(x=>({pack_id:x.pack_id,version:x.version}));
+      outBH.textContent=JSON.stringify(bh,null,2);
+      outRS.textContent=JSON.stringify(rs,null,2);
     }
-
-    function buildJSON(){
-      const bhArr = prettySort(toArray(BH)).map(({pack_id,version})=>({pack_id,version}));
-      const rsArr = prettySort(toArray(RS)).map(({pack_id,version})=>({pack_id,version}));
-      return { bhText: JSON.stringify(bhArr, null, 2), rsText: JSON.stringify(rsArr, null, 2) };
+    async function parseManifest(txt){
+      try{return JSON.parse(txt);}catch{return {}}
     }
-
-    async function refreshOutputs(){
-      const { bhText, rsText } = buildJSON();
-      await typeOut(outBH, bhText);
-      await typeOut(outRS, rsText);
-      log('เสร็จแล้ว ✨ สามารถก๊อป BH/RS ได้เลย', 'ok');
-    }
-
-    function isZipLike(name, type){
-      const n=(name||'').toLowerCase();
-      return type==='application/zip' || /\.(zip|mcpack|mcaddon)$/.test(n);
-    }
-
-    async function parseManifestText(text){
-      let obj;
-      try { obj = JSON.parse(text); }
-      catch {
-        // double-encoded fallback
-        try{
-          const fixed = text.replace(/^\\s*"|"\\s*$/g,'').replace(/\\n/g,'\\n');
-          obj = JSON.parse(JSON.parse('"' + fixed.replace(/"/g,'\\"') + '"'));
-        }catch{ throw new Error('อ่าน JSON ไม่ได้'); }
-      }
-      return obj;
-    }
-
-    function classifyModules(mods){
-      // returns {isBH, isRS}
-      let isBH=false, isRS=false;
-      if (Array.isArray(mods)){
-        for(const m of mods){
-          const t = (m?.type||'').toLowerCase();
-          if (t==='data' || t==='script') isBH = true;
-          if (t==='resources' || t==='client_data') isRS = true;
+    async function handleFiles(files){
+      for(const file of files){
+        if(/manifest\\.json$/i.test(file.name)){
+          const text=await file.text();
+          await handleManifest(await parseManifest(text),file.name);
+        }else if(/\\.(zip|mcpack|mcaddon)$/i.test(file.name)){
+          const zip=await JSZip.loadAsync(file);
+          const entry=Object.values(zip.files).find(f=>/manifest\\.json$/i.test(f.name));
+          if(entry){
+            const text=await entry.async('text');
+            await handleManifest(await parseManifest(text),file.name);
+          }
         }
       }
-      return {isBH, isRS};
+      updateOutputs();
     }
-
-    async function processFile(file){
-      // direct manifest
-      if (/manifest\.json$/i.test(file.name)){
-        const text = await file.text();
-        await handleManifest(await parseManifestText(text), file.name);
-        return;
-      }
-      if (!isZipLike(file.name, file.type)){
-        throw new Error('ไม่รองรับไฟล์นี้ (ต้องเป็น .zip/.mcpack/.mcaddon หรือ manifest.json)');
-      }
-      log('อ่านไฟล์: ' + file.name + ' …');
-      const zip = await JSZip.loadAsync(file);
-      const entry = Object.values(zip.files).find(f => /(^|\/)manifest\.json$/i.test(f.name));
-      if (!entry) throw new Error('ไม่พบ manifest.json ข้างในไฟล์');
-      const text = await entry.async('text');
-      await handleManifest(await parseManifestText(text), `${file.name} → ${entry.name}`);
+    async function handleManifest(obj,from){
+      const h=obj.header||{};
+      const uuid=h.uuid||h.pack_id;
+      const ver=h.version||[];
+      const name=h.name||'unknown';
+      const mods=obj.modules||[];
+      if(!uuid) return;
+      const pack_id=String(uuid);
+      const version=Array.isArray(ver)?ver:ver.toString().split('.').map(Number);
+      if(mods.some(m=>(m.type||'').toLowerCase()==='data')) BH.set(pack_id,{pack_id,version,name,from});
+      if(mods.some(m=>(m.type||'').toLowerCase()==='resources')) RS.set(pack_id,{pack_id,version,name,from});
+      // ถ้าไม่เจอ type เลย → จัดเป็น RS ดีฟอลต์
+      if(!mods.length) RS.set(pack_id,{pack_id,version,name,from});
+      const line=document.createElement('div');
+      line.textContent=`✔ ${name} (${pack_id})`;
+      list.appendChild(line);
     }
-
-    async function handleManifest(obj, fromName){
-      const header = obj?.header || {};
-      const uuid = header.uuid || header.pack_id || obj?.header?.pack_id;
-      const version = header.version || header.pack_version || obj?.header?.pack_version;
-      const name = header.name || header.pack_name || 'Unknown';
-      const modules = obj?.modules || obj?.module || [];
-
-      if (!uuid || !version) throw new Error('ไม่พบ uuid/version ใน manifest');
-
-      const pack_id = String(uuid);
-      const verArr = Array.isArray(version) ? version.map(Number) : String(version).split('.').map(Number);
-
-      const {isBH, isRS} = classifyModules(modules);
-      // ถ้าไม่ได้ระบุชัด (บางแพ็กเก่า) ให้ถือเป็น RS โดยดีฟอลต์
-      const atLeastOne = isBH || isRS ? null : (isRS = true);
-
-      if (isBH){
-        BH.set(pack_id, { pack_id, version:verArr, name, from:fromName });
-        addItemLine({name, pack_id, version:verArr, from:fromName, type:'BH'});
-      }
-      if (isRS){
-        RS.set(pack_id, { pack_id, version:verArr, name, from:fromName });
-        addItemLine({name, pack_id, version:verArr, from:fromName, type:'RS'});
-      }
-      await refreshOutputs();
-    }
-
-    async function handleFiles(fileList){
-      const files = Array.from(fileList);
-      if (!files.length) return;
-      listEl.innerHTML = '';
-      log('กำลังประมวลผล…');
-      for (const file of files){
-        try{ await processFile(file); }
-        catch(e){ log((file.name? file.name+': ' : '') + (e?.message||e), 'err'); }
-      }
-      if (!BH.size && !RS.size){
-        log('ยังไม่มีแพ็กที่ดึงได้ ลองไฟล์อื่นดูนะ', 'err');
-      }
-    }
-
-    // Copy/Download
-    async function copy(text){
-      try{ await navigator.clipboard.writeText(text); log('คัดลอกแล้ว ✅', 'ok'); }
-      catch{ log('คัดลอกไม่สำเร็จ ลองอีกครั้ง', 'err'); }
-    }
-    function download(text, name){
-      const blob = new Blob([text], {type:'application/json'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    copyBH.onclick = ()=> copy(outBH.textContent);
-    copyRS.onclick = ()=> copy(outRS.textContent);
-    dlBH.onclick = ()=> download(outBH.textContent, 'world_behavior_packs.json');
-    dlRS.onclick = ()=> download(outRS.textContent, 'world_resource_packs.json');
-
-    // Drag & Drop
-    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{
-      e.preventDefault(); drop.classList.add('drag');
-    }));
-    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{
-      e.preventDefault(); drop.classList.remove('drag');
-    }));
-    drop.addEventListener('drop', (e)=> handleFiles(e.dataTransfer.files));
-
-    // File picker
-    pick.onclick = ()=> input.click();
-    input.onchange = ()=> handleFiles(input.files);
-
-    clearBtn.onclick = ()=>{
-      BH.clear(); RS.clear();
-      outBH.textContent = '[]'; outRS.textContent = '[]';
-      listEl.innerHTML = ''; log('ล้างข้อมูลแล้ว');
-    };
-
-    log('พร้อมทำงาน ✨');
   </script>
 </body>
 </html>
