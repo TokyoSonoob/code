@@ -3,239 +3,397 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Addon UUID Extractor</title>
-  <meta name="theme-color" content="#0b1220" />
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="data:image/svg+xml;utf8,
-  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'>
-    <rect width='256' height='256' rx='56' fill='%230b1220'/>
-    <text x='50%' y='57%' text-anchor='middle' font-size='120' fill='%238b5cf6' font-family='Arial,Segoe UI,Roboto'>U</text>
-  </svg>">
+  <title>Minecraft Addon Pack Injector (BH/RS)</title>
+  <meta name="theme-color" content="#0b0b1a" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <style>
     :root{
-      --bg:#0b1220; --panel:#0f172a; --soft:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#8b5cf6; --ok:#10b981; --err:#ef4444;
+      --bg:#0b0b1a; --panel:#111327; --soft:#0d1022; --text:#e9e9f2; --muted:#9aa0b3;
+      --accent:#8b5cf6; --accent-2:#a78bfa; --ok:#10b981; --err:#ef4444; --code:#0b1224;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:linear-gradient(165deg,#0b1220 0,#0d1630 50%,#0b1220 100%);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Noto Sans",Arial}
-    .wrap{max-width:960px;margin:0 auto;padding:24px}
-    .card{background:var(--panel);border:1px solid #1f2937;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    header{padding:24px}
-    h1{margin:0 0 8px;font-size:28px}
-    p.muted{margin:0;color:var(--muted)}
-    .uploader{padding:20px;border-top:1px dashed #263244;border-bottom:1px dashed #263244;background:var(--soft)}
-    .drop{border:2px dashed #334155;border-radius:16px;padding:24px;text-align:center}
-    .drop.drag{border-color:var(--accent);background:#0f1435}
-    .btn{appearance:none;border:none;background:var(--accent);color:white;padding:10px 14px;border-radius:12px;font-size:14px;cursor:pointer}
-    .btn.secondary{background:#1f2937;color:#e5e7eb}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .list{padding:16px}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:10px;border-bottom:1px solid #233044;font-size:14px}
-    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#111827;border:1px solid #243044;color:#cbd5e1;font-variant-numeric:tabular-nums}
-    .log{white-space:pre-wrap;background:#0c1222;border-top:1px solid #1f2937;color:#cbd5e1;padding:12px;border-bottom-left-radius:20px;border-bottom-right-radius:20px}
-    .footer{display:flex;gap:8px;justify-content:flex-end;padding:16px;border-top:1px solid #1f2937}
-    .hint{font-size:12px;color:var(--muted)}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Noto Sans",Arial;
+      background:
+        radial-gradient(1200px 600px at 10% 0%, rgba(139,92,246,.15), transparent 50%),
+        radial-gradient(1200px 700px at 90% 100%, rgba(55,48,163,.12), transparent 50%),
+        linear-gradient(180deg, #0b0b1a 0%, #0c0d20 100%);
+      overflow-x:hidden;
+    }
+    .frame {
+      position: fixed; inset: 0; pointer-events:none;
+    }
+    .frame::before, .frame::after{
+      content:""; position:absolute; top:0; bottom:0; width:14px;
+      background:
+        linear-gradient(180deg, rgba(167,139,250,.0), rgba(167,139,250,.35) 40%, rgba(139,92,246,.45), rgba(167,139,250,.2) 60%, rgba(167,139,250,.0));
+      filter: blur(2px);
+      animation: glow 3.6s linear infinite;
+    }
+    .frame::before{ left:18px }
+    .frame::after{ right:18px; animation-delay:1.2s }
+    @keyframes glow{
+      0%{ opacity:.35 } 50%{ opacity:.85 } 100%{ opacity:.35 }
+    }
+
+    .wrap{max-width:1100px;margin:0 auto;padding:28px}
+    header.hero{
+      display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      padding:16px 8px 8px;
+    }
+    .title{font-size:28px; font-weight:800; letter-spacing:.4px}
+    .subtitle{color:var(--muted); margin-top:4px}
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)) , var(--panel);
+      border:1px solid rgba(167,139,250,.25);
+      border-radius:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+      overflow:hidden;
+    }
+    .row{display:flex; gap:16px; flex-wrap:wrap}
+    .grow{flex:1}
+
+    .drop{
+      margin:16px; padding:20px; border-radius:16px;
+      background:var(--soft);
+      border:2px dashed rgba(167,139,250,.35);
+      text-align:center;
+      transition:.15s border-color, .15s background;
+    }
+    .drop.drag{ border-color:var(--accent); background:#0f1131 }
+    .hint{font-size:12px; color:var(--muted)}
+
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      padding:10px 14px; border-radius:12px; font-weight:600;
+      background:linear-gradient(180deg, var(--accent), var(--accent-2));
+      color:white; box-shadow:0 8px 20px rgba(139,92,246,.35);
+      transition: transform .05s ease-in-out;
+    }
+    .btn:active{ transform: translateY(1px) }
+    .btn.secondary{
+      background:#1b1f3a; color:#e9e9f2; box-shadow:none; border:1px solid rgba(167,139,250,.25);
+    }
+    .toolbar{
+      display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid rgba(167,139,250,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+    }
+
+    .cols{ display:grid; grid-template-columns:1fr; gap:16px; padding:16px }
+    @media (min-width:900px){ .cols{ grid-template-columns:1fr 1fr } }
+
+    .panel{
+      border:1px solid rgba(167,139,250,.22);
+      border-radius:16px; overflow:hidden;
+      background:linear-gradient(180deg, rgba(255,255,255,.015), rgba(255,255,255,0)) , #0f1229;
+    }
+    .panel header{
+      padding:10px 14px; display:flex; align-items:center; justify-content:space-between;
+      background:linear-gradient(180deg, rgba(167,139,250,.12), rgba(167,139,250,.04));
+      border-bottom:1px solid rgba(167,139,250,.18);
+    }
+    .panel h3{ margin:0; font-size:16px; letter-spacing:.3px }
+    .panel .body{ padding:12px }
+    pre{
+      margin:0; padding:14px; background:var(--code); border-radius:12px; overflow:auto;
+      border:1px solid #1d2544; font-size:13px; line-height:1.45; color:#e6f3ff;
+      box-shadow: inset 0 0 24px rgba(23,24,60,.5);
+    }
+    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
+
+    .log{ padding:12px 16px; border-top:1px dashed rgba(167,139,250,.22); color:#c9d3ff; background:#0d1130 }
+    .log .ok{ color:var(--ok) } .log .err{ color:var(--err) }
+
+    .list{
+      padding:10px 16px; border-top:1px solid rgba(167,139,250,.15);
+      max-height:260px; overflow:auto; background:linear-gradient(180deg, rgba(255,255,255,.01), transparent);
+    }
+    .item{ display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(167,139,250,.12)}
+    .badge{ font-variant-numeric: tabular-nums; padding:2px 8px; border-radius:999px; background:#14183a; border:1px solid rgba(167,139,250,.25); color:#cbd5ff }
+
+    .fade-in{ animation: fade .2s ease-out }
+    @keyframes fade{ from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <header>
-      <h1>🧩 Addon UUID Extractor</h1>
-      <p class="muted">อัปโหลดหลายไฟล์ได้ (.zip, .mcpack, .mcaddon หรือ <code>manifest.json</code>) — ดึง <b>pack_id</b> และ <b>version</b> จาก <code>manifest.json</code> แล้วรวมเป็น JSON พร้อมดาวน์โหลด</p>
+  <div class="frame"></div>
+
+  <div class="wrap">
+    <header class="hero">
+      <div>
+        <div class="title">🧩 Addon Injector Helper — <span style="color:var(--accent)">BH/RS</span></div>
+        <div class="subtitle">อัปโหลดหลายแอดออน → ดึง UUID/Version จาก <code>manifest.json</code> → พิมพ์โค้ดสำหรับ <b>world_behavior_packs.json</b> และ <b>world_resource_packs.json</b> ให้อัตโนมัติ</div>
+      </div>
+      <div class="row">
+        <button class="btn secondary" id="btnClear">ล้างผลลัพธ์</button>
+        <button class="btn" id="btnPick">เลือกไฟล์…</button>
+        <input id="file" type="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json"/>
+      </div>
     </header>
 
-    <div class="uploader">
-      <div id="drop" class="drop">
-        <p style="margin:0 0 10px">ลากไฟล์มาปล่อยที่นี่ หรือ</p>
-        <div class="row" style="justify-content:center">
-          <input id="file" type="file" multiple accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json"/>
-          <button class="btn" id="pick">เลือกไฟล์…</button>
+    <section class="card">
+      <div class="drop" id="drop">
+        <div style="font-size:18px; font-weight:800; letter-spacing:.3px">ลากไฟล์มาวางที่นี่</div>
+        <div class="hint" style="margin-top:6px">
+          รองรับ .zip / .mcpack / .mcaddon / manifest.json (หลายไฟล์พร้อมกัน) • ระบบจะค้นหา <code>manifest.json</code> ข้างในให้อัตโนมัติ
         </div>
-        <p class="hint" style="margin-top:10px">รองรับหลายไฟล์พร้อมกัน • จะพยายามค้นหา <code>manifest.json</code> ที่อยู่ข้างในอัตโนมัติ</p>
       </div>
-    </div>
 
-    <div class="list">
-      <table class="table" id="table">
-        <thead>
-          <tr>
-            <th style="width:44px">#</th>
-            <th>ชื่อแพ็ก</th>
-            <th>pack_id (UUID)</th>
-            <th style="width:140px">version</th>
-            <th style="width:160px">จากไฟล์</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <div class="list" id="list"></div>
 
-    <div class="footer">
-      <button class="btn secondary" id="clearBtn">ล้างผลลัพธ์</button>
-      <button class="btn secondary" id="copyBtn">คัดลอก JSON</button>
-      <button class="btn" id="saveBtn">ดาวน์โหลด JSON</button>
-    </div>
+      <div class="cols">
+        <div class="panel">
+          <header>
+            <h3>world_behavior_packs.json</h3>
+            <div class="row">
+              <button class="btn secondary" id="copyBH">คัดลอก</button>
+              <button class="btn secondary" id="downloadBH">ดาวน์โหลด</button>
+            </div>
+          </header>
+          <div class="body">
+            <pre class="fade-in"><code id="outBH">[]</code></pre>
+          </div>
+        </div>
+        <div class="panel">
+          <header>
+            <h3>world_resource_packs.json</h3>
+            <div class="row">
+              <button class="btn secondary" id="copyRS">คัดลอก</button>
+              <button class="btn secondary" id="downloadRS">ดาวน์โหลด</button>
+            </div>
+          </header>
+          <div class="body">
+            <pre class="fade-in"><code id="outRS">[]</code></pre>
+          </div>
+        </div>
+      </div>
 
-    <div id="log" class="log" hidden></div>
+      <div class="toolbar">
+        <span class="hint">Tip: คลิก “คัดลอก” เพื่อเอาไปวางในไฟล์โลกได้ทันที • เรียงตามชื่อแพ็ก (รองรับไทย) → เวอร์ชันมาก→น้อย</span>
+      </div>
+
+      <div class="log" id="log">พร้อมทำงาน ✨</div>
+    </section>
   </div>
-</div>
 
-<!-- JSZip (offline cached by SW) -->
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
-<script>
-  const drop = document.getElementById('drop');
-  const input = document.getElementById('file');
-  const pick = document.getElementById('pick');
-  const tbody = document.querySelector('#table tbody');
-  const logEl = document.getElementById('log');
-  const copyBtn = document.getElementById('copyBtn');
-  const saveBtn = document.getElementById('saveBtn');
-  const clearBtn = document.getElementById('clearBtn');
+  <!-- JSZip -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
+  <script>
+    const drop = document.getElementById('drop');
+    const input = document.getElementById('file');
+    const pick = document.getElementById('btnPick');
+    const clearBtn = document.getElementById('btnClear');
+    const logEl = document.getElementById('log');
+    const listEl = document.getElementById('list');
 
-  const results = new Map(); // key = pack_id, value = { pack_id, version, name, from }
+    const outBH = document.getElementById('outBH');
+    const outRS = document.getElementById('outRS');
 
-  function showLog(msg, type='info'){
-    logEl.hidden = false;
-    const stamp = new Date().toLocaleTimeString();
-    const line = type==='error' ? `❌ [${stamp}] ${msg}` : `• [${stamp}] ${msg}`;
-    logEl.textContent = (logEl.textContent ? logEl.textContent + '\n' : '') + line;
-  }
+    const copyBH = document.getElementById('copyBH');
+    const copyRS = document.getElementById('copyRS');
+    const dlBH = document.getElementById('downloadBH');
+    const dlRS = document.getElementById('downloadRS');
 
-  function decodeUnicodeEscapes(str){
-    try {
-      if (/\\u[0-9a-fA-F]{4}/.test(str)) {
-        return str.replace(/\\u([0-9a-fA-F]{4})/g, (_, g1) => String.fromCharCode(parseInt(g1, 16)));
+    // store by pack_id (avoid duplicates)
+    const BH = new Map(); // {pack_id,version,name,from}
+    const RS = new Map();
+
+    function log(msg, cls){
+      logEl.innerHTML = (cls==='err' ? '❌ ' : cls==='ok' ? '✅ ' : '• ') + msg;
+      if (cls) logEl.className = 'log ' + cls;
+      else logEl.className = 'log';
+    }
+
+    function decodeUnicodeEscapes(str){
+      try { return /\\u[0-9a-fA-F]{4}/.test(str) ? str.replace(/\\u([0-9a-fA-F]{4})/g, (_,g1)=>String.fromCharCode(parseInt(g1,16))) : str; }
+      catch { return str; }
+    }
+
+    function addItemLine({name, pack_id, version, from, type}){
+      const line = document.createElement('div');
+      line.className = 'item fade-in';
+      line.innerHTML = `
+        <span class="badge">${type}</span>
+        <div class="grow">
+          <div style="font-weight:700">${decodeUnicodeEscapes(name||'(ไม่ระบุ)')}</div>
+          <div class="hint">UUID: <code>${pack_id}</code> • version: <code>[${version.join(', ')}]</code> • <span>${from}</span></div>
+        </div>
+      `;
+      listEl.appendChild(line);
+    }
+
+    function prettySort(arr){
+      arr.sort((a,b)=>{
+        const nameCmp = (a.name||'').toString().localeCompare((b.name||'').toString(),'th');
+        if (nameCmp!==0) return nameCmp;
+        const av=a.version||[], bv=b.version||[];
+        for(let i=0;i<Math.max(av.length,bv.length);i++){
+          const ai=av[i]??0, bi=bv[i]??0;
+          if (ai!==bi) return bi-ai;
+        }
+        return a.pack_id.localeCompare(b.pack_id);
+      });
+      return arr;
+    }
+
+    function toArray(map){ return Array.from(map.values()); }
+
+    async function typeOut(el, text){
+      // “ค่อยๆ พิมพ์” แบบเรียลไทม์
+      el.textContent = '';
+      const delay = 6; // ms ต่อ char
+      for (let i=0;i<text.length;i++){
+        el.textContent += text[i];
+        if (i % 4 === 0) await new Promise(r=>setTimeout(r, delay));
       }
-      return str;
-    } catch { return str; }
-  }
+    }
 
-  function addRow(idx, item){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="pill">${idx}</span></td>
-      <td>${item.name ? decodeUnicodeEscapes(item.name) : '<span class="muted">(ไม่ระบุ)</span>'}</td>
-      <td><code>${item.pack_id}</code></td>
-      <td><code>[${item.version.join(', ')}]</code></td>
-      <td class="muted">${item.from}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+    function buildJSON(){
+      const bhArr = prettySort(toArray(BH)).map(({pack_id,version})=>({pack_id,version}));
+      const rsArr = prettySort(toArray(RS)).map(({pack_id,version})=>({pack_id,version}));
+      return { bhText: JSON.stringify(bhArr, null, 2), rsText: JSON.stringify(rsArr, null, 2) };
+    }
 
-  function refreshTable(){
-    tbody.innerHTML = '';
-    const arr = Array.from(results.values());
-    // sort by name (locale), then version desc, then UUID
-    arr.sort((a,b)=>{
-      const nameCmp = (a.name||'').toString().localeCompare((b.name||'').toString(), 'th');
-      if (nameCmp !== 0) return nameCmp;
-      const av = a.version||[], bv = b.version||[];
-      for (let i=0;i<Math.max(av.length,bv.length);i++){
-        const ai = av[i]??0, bi = bv[i]??0;
-        if (ai!==bi) return bi-ai; // desc
+    async function refreshOutputs(){
+      const { bhText, rsText } = buildJSON();
+      await typeOut(outBH, bhText);
+      await typeOut(outRS, rsText);
+      log('เสร็จแล้ว ✨ สามารถก๊อป BH/RS ได้เลย', 'ok');
+    }
+
+    function isZipLike(name, type){
+      const n=(name||'').toLowerCase();
+      return type==='application/zip' || /\.(zip|mcpack|mcaddon)$/.test(n);
+    }
+
+    async function parseManifestText(text){
+      let obj;
+      try { obj = JSON.parse(text); }
+      catch {
+        // double-encoded fallback
+        try{
+          const fixed = text.replace(/^\\s*"|"\\s*$/g,'').replace(/\\n/g,'\\n');
+          obj = JSON.parse(JSON.parse('"' + fixed.replace(/"/g,'\\"') + '"'));
+        }catch{ throw new Error('อ่าน JSON ไม่ได้'); }
       }
-      return a.pack_id.localeCompare(b.pack_id);
-    });
-    arr.forEach((it, i) => addRow(i+1, it));
-  }
-
-  function exportJSON(){
-    const arr = Array.from(results.values()).map(({pack_id,version})=>({pack_id,version}));
-    return JSON.stringify(arr, null, 2);
-  }
-
-  copyBtn.onclick = async () => {
-    try { await navigator.clipboard.writeText(exportJSON()); } catch {}
-    showLog('คัดลอก JSON ไปยังคลิปบอร์ดแล้ว ✅');
-  };
-  saveBtn.onclick = () => {
-    const blob = new Blob([exportJSON()], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'addon-pack-ids.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-  clearBtn.onclick = () => {
-    results.clear(); refreshTable(); logEl.hidden = true; logEl.textContent = '';
-  };
-
-  pick.onclick = () => input.click();
-  input.onchange = () => handleFiles(input.files);
-
-  // drag & drop
-  ;['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add('drag');}));
-  ;['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove('drag');}));
-  drop.addEventListener('drop', e => { handleFiles(e.dataTransfer.files); });
-
-  async function handleFiles(fileList){
-    const files = Array.from(fileList);
-    if (!files.length) return;
-    for (const file of files){
-      try { await processFile(file); }
-      catch (err){ showLog(`${file.name}: ${err?.message||err}`, 'error'); }
+      return obj;
     }
-    refreshTable();
-  }
 
-  function isZipLike(name, type){
-    const n = (name||'').toLowerCase();
-    return type === 'application/zip' || /\.(zip|mcpack|mcaddon)$/.test(n);
-  }
-
-  async function processFile(file){
-    // manifest.json directly
-    if (/manifest\.json$/i.test(file.name)){
-      const text = await file.text();
-      await parseManifestText(text, file.name);
-      return;
+    function classifyModules(mods){
+      // returns {isBH, isRS}
+      let isBH=false, isRS=false;
+      if (Array.isArray(mods)){
+        for(const m of mods){
+          const t = (m?.type||'').toLowerCase();
+          if (t==='data' || t==='script') isBH = true;
+          if (t==='resources' || t==='client_data') isRS = true;
+        }
+      }
+      return {isBH, isRS};
     }
-    if (!isZipLike(file.name, file.type)){
-      throw new Error('ไม่รองรับไฟล์นี้ (ต้องเป็น .zip/.mcpack/.mcaddon หรือ manifest.json)');
+
+    async function processFile(file){
+      // direct manifest
+      if (/manifest\.json$/i.test(file.name)){
+        const text = await file.text();
+        await handleManifest(await parseManifestText(text), file.name);
+        return;
+      }
+      if (!isZipLike(file.name, file.type)){
+        throw new Error('ไม่รองรับไฟล์นี้ (ต้องเป็น .zip/.mcpack/.mcaddon หรือ manifest.json)');
+      }
+      log('อ่านไฟล์: ' + file.name + ' …');
+      const zip = await JSZip.loadAsync(file);
+      const entry = Object.values(zip.files).find(f => /(^|\/)manifest\.json$/i.test(f.name));
+      if (!entry) throw new Error('ไม่พบ manifest.json ข้างในไฟล์');
+      const text = await entry.async('text');
+      await handleManifest(await parseManifestText(text), `${file.name} → ${entry.name}`);
     }
-    showLog(`อ่านไฟล์ ${file.name} …`);
-    const zip = await JSZip.loadAsync(file);
-    const manifestEntry = Object.values(zip.files).find(f => /(^|\/)manifest\.json$/i.test(f.name));
-    if (!manifestEntry) throw new Error('ไม่พบ manifest.json ในไฟล์');
-    const text = await manifestEntry.async('text');
-    await parseManifestText(text, `${file.name} → ${manifestEntry.name}`);
-  }
 
-  async function parseManifestText(text, fromName){
-    let obj;
-    try{
-      obj = JSON.parse(text);
-    }catch(e){
-      // fallback: doubly-encoded string
-      try{
-        const fixed = text.replace(/^\s*"|"\s*$/g,'').replace(/\\n/g,'\\n');
-        obj = JSON.parse(JSON.parse('"' + fixed.replace(/"/g,'\\"') + '"'));
-      }catch{ throw new Error('อ่าน JSON ไม่ได้'); }
+    async function handleManifest(obj, fromName){
+      const header = obj?.header || {};
+      const uuid = header.uuid || header.pack_id || obj?.header?.pack_id;
+      const version = header.version || header.pack_version || obj?.header?.pack_version;
+      const name = header.name || header.pack_name || 'Unknown';
+      const modules = obj?.modules || obj?.module || [];
+
+      if (!uuid || !version) throw new Error('ไม่พบ uuid/version ใน manifest');
+
+      const pack_id = String(uuid);
+      const verArr = Array.isArray(version) ? version.map(Number) : String(version).split('.').map(Number);
+
+      const {isBH, isRS} = classifyModules(modules);
+      // ถ้าไม่ได้ระบุชัด (บางแพ็กเก่า) ให้ถือเป็น RS โดยดีฟอลต์
+      const atLeastOne = isBH || isRS ? null : (isRS = true);
+
+      if (isBH){
+        BH.set(pack_id, { pack_id, version:verArr, name, from:fromName });
+        addItemLine({name, pack_id, version:verArr, from:fromName, type:'BH'});
+      }
+      if (isRS){
+        RS.set(pack_id, { pack_id, version:verArr, name, from:fromName });
+        addItemLine({name, pack_id, version:verArr, from:fromName, type:'RS'});
+      }
+      await refreshOutputs();
     }
-    const header = obj?.header || obj?.headers || {};
-    const uuid = header.uuid || header.pack_id || obj?.header?.pack_id;
-    const version = header.version || header.pack_version || obj?.header?.pack_version;
-    const name = header.name || header.pack_name || 'Unknown';
 
-    if (!uuid || !version) throw new Error('ไม่พบ uuid/version ใน manifest');
+    async function handleFiles(fileList){
+      const files = Array.from(fileList);
+      if (!files.length) return;
+      listEl.innerHTML = '';
+      log('กำลังประมวลผล…');
+      for (const file of files){
+        try{ await processFile(file); }
+        catch(e){ log((file.name? file.name+': ' : '') + (e?.message||e), 'err'); }
+      }
+      if (!BH.size && !RS.size){
+        log('ยังไม่มีแพ็กที่ดึงได้ ลองไฟล์อื่นดูนะ', 'err');
+      }
+    }
 
-    const pack_id = String(uuid);
-    const verArr = Array.isArray(version) ? version.map(Number) : String(version).split('.').map(Number);
+    // Copy/Download
+    async function copy(text){
+      try{ await navigator.clipboard.writeText(text); log('คัดลอกแล้ว ✅', 'ok'); }
+      catch{ log('คัดลอกไม่สำเร็จ ลองอีกครั้ง', 'err'); }
+    }
+    function download(text, name){
+      const blob = new Blob([text], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
 
-    results.set(pack_id, { pack_id, version: verArr, name, from: fromName });
-    showLog(`✔ ดึงข้อมูลได้จาก ${fromName}`);
-  }
+    copyBH.onclick = ()=> copy(outBH.textContent);
+    copyRS.onclick = ()=> copy(outRS.textContent);
+    dlBH.onclick = ()=> download(outBH.textContent, 'world_behavior_packs.json');
+    dlRS.onclick = ()=> download(outRS.textContent, 'world_resource_packs.json');
 
-  // PWA
-  if ('serviceWorker' in navigator){
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(()=> showLog('Service Worker พร้อมสำหรับใช้งานออฟไลน์ ✅'))
-        .catch(err=> showLog('SW error: '+err.message, 'error'));
-    });
-  }
-</script>
+    // Drag & Drop
+    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{
+      e.preventDefault(); drop.classList.add('drag');
+    }));
+    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{
+      e.preventDefault(); drop.classList.remove('drag');
+    }));
+    drop.addEventListener('drop', (e)=> handleFiles(e.dataTransfer.files));
+
+    // File picker
+    pick.onclick = ()=> input.click();
+    input.onchange = ()=> handleFiles(input.files);
+
+    clearBtn.onclick = ()=>{
+      BH.clear(); RS.clear();
+      outBH.textContent = '[]'; outRS.textContent = '[]';
+      listEl.innerHTML = ''; log('ล้างข้อมูลแล้ว');
+    };
+
+    log('พร้อมทำงาน ✨');
+  </script>
 </body>
 </html>
