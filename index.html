@@ -1,132 +1,411 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Purple Shop UUID Injector</title>
-  <style>
-    :root{
-      --bg:#0b0b1a; --panel:#111327; --soft:#0d1022; --text:#e9e9f2; --muted:#9aa0b3;
-      --accent:#8b5cf6; --accent-2:#3b82f6;
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family: "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height:100vh;
-      display:flex;flex-direction:column;
-    }
-
-    /* แถบด้านบน */
-    .banner{
-      width:100%;
-      padding:16px;
-      text-align:center;
-      font-size:28px;
-      font-weight:900;
-      text-transform:uppercase;
-      background:linear-gradient(90deg, var(--accent), var(--accent-2));
-      color:transparent;
-      -webkit-background-clip:text;
-      background-clip:text;
-      letter-spacing:1px;
-      text-shadow:0 2px 6px rgba(0,0,0,.6);
-    }
-
-    .wrap{max-width:960px;margin:0 auto;padding:24px;flex:1;width:100%}
-    .card{background:var(--panel);border-radius:20px;padding:20px;margin-top:16px}
-    .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
-    .btn:active{transform:scale(.97)}
-    .drop{margin-top:12px;padding:20px;border:2px dashed var(--accent);border-radius:14px;text-align:center}
-    .list{margin-top:16px}
-    pre{background:#0d1130;padding:12px;border-radius:10px;overflow:auto;font-size:13px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Purple Shop — RP/BP Injector</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg1:#070313; --bg2:#0a0620; --bg3:#0f0a2a;
+    --p1:#8b5cf6; --p2:#60a5fa; --p3:#a78bfa;
+    --ok:#10b981; --err:#ef4444; --text:#e7e7f3; --muted:#9aa0b3;
+  }
+  html,body{height:100%}
+  body{
+    font-family:'Prompt',system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans Thai',sans-serif;
+    background:
+      radial-gradient(1200px 700px at -10% -10%, rgba(139,92,246,.20), transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%, rgba(96,165,250,.18), transparent 65%),
+      linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 42%, var(--bg3) 100%);
+    color:var(--text);
+    overflow-x:hidden;
+  }
+  /* ไฟเฟรมซ้าย/ขวา */
+  .frame:before,.frame:after{
+    content:"";position:fixed;top:0;bottom:0;width:16px;z-index:0;pointer-events:none;filter:blur(1px);
+    background:linear-gradient(180deg,transparent,rgba(167,139,250,.45),rgba(96,165,250,.45),transparent);
+    animation:glow 3.6s linear infinite;
+  }
+  .frame:before{left:20px}
+  .frame:after{right:20px;animation-delay:1.2s}
+  @keyframes glow{0%{opacity:.35}50%{opacity:.85}100%{opacity:.35}}
+  /* ปุ่มหลัก */
+  .hero-btn{
+    position:relative; isolation:isolate; border:none; cursor:pointer; border-radius:18px;
+    padding:18px 26px; font-weight:800; letter-spacing:.3px; font-size:18px; color:white;
+    background:
+      radial-gradient(120% 180% at 20% 20%, rgba(96,165,250,.18), transparent 40%),
+      radial-gradient(120% 180% at 80% 80%, rgba(167,139,250,.22), transparent 40%),
+      linear-gradient(135deg, #6d28d9, #3b82f6);
+    box-shadow:0 18px 60px rgba(99,102,241,.35), inset 0 0 0 1px rgba(255,255,255,.08);
+    transition:transform .12s ease, box-shadow .25s ease;
+  }
+  .hero-btn:hover{ transform:translateY(-1px); box-shadow:0 24px 72px rgba(99,102,241,.48) }
+  .hero-btn:active{ transform:translateY(0) scale(.98) }
+  .hero-btn .shine{
+    position:absolute; inset:-2px; border-radius:20px; content:""; z-index:-1; filter:blur(14px);
+    background:conic-gradient(from 0deg, rgba(139,92,246,.35), rgba(96,165,250,.35), rgba(139,92,246,.35));
+    animation:spin 4s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* Ripple */
+  .ripple{position:absolute;border-radius:50%;transform:scale(0);opacity:.75;pointer-events:none;
+    background:radial-gradient(circle, rgba(255,255,255,.4) 0%, rgba(255,255,255,.12) 40%, transparent 60%);
+    animation:ripple .6s ease-out forwards;}
+  @keyframes ripple{to{transform:scale(6);opacity:0}}
+  /* กล่องทำงาน / สปินเนอร์ */
+  .work{
+    border-radius:18px; border:1px solid rgba(167,139,250,.25);
+    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+    box-shadow:0 18px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .spinner{width:38px;height:38px;border-radius:50%;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin 1s linear infinite}
+  .check{ width:64px;height:64px;border-radius:50%; background:rgba(16,185,129,.15); border:3px solid var(--ok); display:grid; place-items:center; }
+  .check svg{ transform:scale(.9); }
+  .fade-in{animation:fade .25s ease-out forwards; opacity:0; transform:translateY(6px)}
+  @keyframes fade{to{opacity:1;transform:none}}
+  /* โมดัลคู่ (RP/BP) */
+  .modal{ position:fixed; inset:0; background:rgba(6,4,12,.6); backdrop-filter: blur(10px); display:none; z-index:40; }
+  .modal.open{ display:grid; place-items:center; }
+  .panel{
+    width:min(1000px, 96vw);
+    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)) , #0e0a1d;
+    border:1px solid rgba(167,139,250,.28); border-radius:22px;
+    box-shadow:0 26px 80px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.02);
+    overflow:hidden; transform:scale(.96); opacity:0; animation:pop .28s ease-out .05s forwards;
+  }
+  @keyframes pop{to{transform:scale(1);opacity:1}}
+  .panel header{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px;
+    background:linear-gradient(180deg, rgba(167,139,250,.16), rgba(167,139,250,.06)); border-bottom:1px solid rgba(167,139,250,.2) }
+  .panel h3{ margin:0; font-size:16px; letter-spacing:.3px }
+  .codebox{ padding:12px 14px; background:#0b0a18; border:1px solid #221f3e; border-radius:14px; color:#e6f3ff;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; line-height:1.45; box-shadow: inset 0 0 22px rgba(20,20,48,.6); min-height:120px; }
+  .twinkle{ animation:twinkle 1.6s ease-in-out infinite; }
+  @keyframes twinkle{ 50%{opacity:.6} }
+  .btn{border:none;border-radius:12px;padding:10px 14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#7c3aed,#3b82f6);box-shadow:0 10px 30px rgba(99,102,241,.35);cursor:pointer}
+  .btn:active{ transform: translateY(1px) }
+  .btn.secondary{ background:#1b1f3a; border:1px solid rgba(167,139,250,.25); box-shadow:none; color:#e9e9f2 }
+  .hint{ color:var(--muted) }
+  .tag{ display:inline-block; border-radius:999px; padding:2px 8px; border:1px solid rgba(167,139,250,.3); background:#14183a; font-size:12px; margin-right:6px }
+</style>
 </head>
 <body>
-  <div class="banner">💜💙 Purple Shop ไงไอสัส</div>
+<div class="frame"></div>
 
-  <div class="wrap">
-    <div class="card">
-      <h2>อัปโหลด Addon manifest.json หรือ .mcpack/.mcaddon</h2>
-      <div class="drop" id="drop">
-        ลากไฟล์มาปล่อยตรงนี้ หรือ <button class="btn" id="pick">เลือกไฟล์</button>
-        <input type="file" id="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json">
+<main class="relative z-10 max-w-5xl mx-auto px-5 sm:px-8 py-10 sm:py-14">
+  <!-- Heading -->
+  <header class="mb-10 sm:mb-14 text-center">
+    <h1 class="font-extrabold text-4xl sm:text-6xl tracking-tight"
+        style="background:linear-gradient(90deg,#8b5cf6,#60a5fa,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 10px 32px rgba(96,165,250,.25))">
+      💜💙 Purple Shop — RP/BP Injector
+    </h1>
+    <p class="mt-3 text-sm sm:text-base hint">อัปโหลดหลายไฟล์ได้ • จะจัดกลุ่มเป็น <span class="tag">RP/RS</span> และ <span class="tag">BP/BH</span> ให้เอง</p>
+  </header>
+
+  <!-- Hero Card -->
+  <section class="work p-6 sm:p-8">
+    <div class="flex flex-col items-center gap-6 sm:gap-8">
+      <!-- ปุ่มใหญ่อลังการ -->
+      <button id="bigBtn" class="hero-btn relative">
+        <span class="shine"></span>
+        <span class="inline-flex items-center gap-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          เลือกไฟล์ / ลากมาวาง
+        </span>
+        <input id="file" type="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json">
+      </button>
+
+      <!-- โซนอัปโหลดแบบลาก -->
+      <div id="drop" class="w-full rounded-xl border border-violet-700/30 bg-[#0b0a18]/60 p-4 text-center text-sm hint">
+        หรือ ลากไฟล์ลงบนพื้นที่นี้ (.zip / .mcpack / .mcaddon / manifest.json)
       </div>
-      <div class="list" id="list"></div>
-      <h3>world_behavior_packs.json</h3>
-      <pre id="outBH">[]</pre>
-      <h3>world_resource_packs.json</h3>
-      <pre id="outRS">[]</pre>
+
+      <!-- โซนสถานะ -->
+      <div id="statusBox" class="w-full grid place-items-center gap-3 p-6 rounded-xl border border-violet-700/25 bg-[#0b0a18]/50">
+        <div id="sp" class="spinner"></div>
+        <div id="done" class="hidden check">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div id="statusText" class="text-sm sm:text-base twinkle">พร้อมทำงาน — กดปุ่มเพื่อเลือกไฟล์ หรือ ลากไฟล์ลงมาได้เลย</div>
+      </div>
+
+      <!-- รายการแพ็กที่อ่านได้ -->
+      <div id="list" class="w-full max-h-72 overflow-auto rounded-xl border border-violet-700/20 bg-[#0b0a18]/40 p-3 space-y-2"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal RP/BP -->
+<div id="modal" class="modal">
+  <div class="panel">
+    <header>
+      <h3>ผลลัพธ์พร้อมใช้งาน (คัดลอก/ดาวน์โหลดได้ทันที)</h3>
+      <div class="flex gap-2">
+        <button id="closeModal" class="btn secondary">ปิด</button>
+      </div>
+    </header>
+    <div class="grid gap-4 sm:grid-cols-2 p-4 sm:p-5">
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="font-semibold">world_resource_packs.json (RP/RS)</h4>
+          <div class="flex gap-2">
+            <button id="copyRS" class="btn secondary">คัดลอก</button>
+            <button id="dlRS" class="btn">ดาวน์โหลด</button>
+          </div>
+        </div>
+        <pre class="codebox"><code id="outRS">[]</code></pre>
+      </section>
+
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="font-semibold">world_behavior_packs.json (BP/BH)</h4>
+          <div class="flex gap-2">
+            <button id="copyBH" class="btn secondary">คัดลอก</button>
+            <button id="dlBH" class="btn">ดาวน์โหลด</button>
+          </div>
+        </div>
+        <pre class="codebox"><code id="outBH">[]</code></pre>
+      </section>
+    </div>
+    <div class="px-5 pb-5 -mt-2">
+      <p class="hint">เรียงตามชื่อแพ็ก (รองรับไทย) → แล้วตามเวอร์ชันมาก→น้อย • ไม่ซ้ำ UUID</p>
     </div>
   </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script>
-    const drop=document.getElementById('drop');
-    const input=document.getElementById('file');
-    const pick=document.getElementById('pick');
-    const outBH=document.getElementById('outBH');
-    const outRS=document.getElementById('outRS');
-    const list=document.getElementById('list');
-    const BH=new Map(), RS=new Map();
+<!-- libs -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
+<script>
+  const bigBtn = document.getElementById('bigBtn');
+  const fileInp = document.getElementById('file');
+  const drop = document.getElementById('drop');
+  const sp = document.getElementById('sp');
+  const done = document.getElementById('done');
+  const statusText = document.getElementById('statusText');
+  const listEl = document.getElementById('list');
+  const modal = document.getElementById('modal');
+  const closeModal = document.getElementById('closeModal');
+  const outRS = document.getElementById('outRS');
+  const outBH = document.getElementById('outBH');
+  const copyRS = document.getElementById('copyRS');
+  const copyBH = document.getElementById('copyBH');
+  const dlRS = document.getElementById('dlRS');
+  const dlBH = document.getElementById('dlBH');
 
-    pick.onclick=()=>input.click();
-    input.onchange=()=>handleFiles(input.files);
+  // ripple
+  function ripple(e, host){
+    const rect = host.getBoundingClientRect();
+    const r = document.createElement('span');
+    r.className='ripple';
+    const size=Math.max(rect.width, rect.height);
+    r.style.width=r.style.height=size+'px';
+    r.style.left=(e.clientX-rect.left-size/2)+'px';
+    r.style.top=(e.clientY-rect.top-size/2)+'px';
+    host.appendChild(r);
+    setTimeout(()=>r.remove(),650);
+  }
 
-    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.style.background='#1a1b3d'}));
-    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.style.background=''}));
-    drop.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
+  bigBtn.addEventListener('click', (e)=>{
+    ripple(e, bigBtn);
+    fileInp.click();
+  });
 
-    function prettySort(arr){
-      return arr.sort((a,b)=>{
-        const n=(a.name||'').localeCompare(b.name||'', 'th');
-        if(n!==0) return n;
-        return b.version.join('.').localeCompare(a.version.join('.'));
-      });
-    }
-    function updateOutputs(){
-      const bh=prettySort([...BH.values()]).map(x=>({pack_id:x.pack_id,version:x.version}));
-      const rs=prettySort([...RS.values()]).map(x=>({pack_id:x.pack_id,version:x.version}));
-      outBH.textContent=JSON.stringify(bh,null,2);
-      outRS.textContent=JSON.stringify(rs,null,2);
-    }
-    async function parseManifest(txt){
-      try{return JSON.parse(txt);}catch{return {}}
-    }
-    async function handleFiles(files){
-      for(const file of files){
-        if(/manifest\\.json$/i.test(file.name)){
-          const text=await file.text();
-          await handleManifest(await parseManifest(text),file.name);
-        }else if(/\\.(zip|mcpack|mcaddon)$/i.test(file.name)){
-          const zip=await JSZip.loadAsync(file);
-          const entry=Object.values(zip.files).find(f=>/manifest\\.json$/i.test(f.name));
-          if(entry){
-            const text=await entry.async('text');
-            await handleManifest(await parseManifest(text),file.name);
-          }
-        }
+  // drag&drop
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,(e)=>{e.preventDefault(); drop.style.background='#0f0e20';}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,(e)=>{e.preventDefault(); drop.style.background='';}));
+  drop.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+  fileInp.onchange = ()=> handleFiles(fileInp.files);
+
+  // data stores
+  const RS = new Map(); // pack_id -> {pack_id, version, name, from}
+  const BH = new Map();
+
+  function setWorking(on, text){
+    statusText.textContent = text || (on ? 'กำลังประมวลผล…' : 'พร้อมทำงาน');
+    sp.style.display = on ? 'block' : 'none';
+    done.classList.toggle('hidden', on);
+  }
+
+  function appendLine({name, pack_id, version, from, type}){
+    const row = document.createElement('div');
+    row.className = 'fade-in flex items-center gap-2 p-2 rounded-lg border border-violet-700/20 bg-[#0b0a18]/40';
+    row.innerHTML = `
+      <span class="tag">${type}</span>
+      <div class="grow">
+        <div class="font-semibold">${escapeHTML(name||'(ไม่ระบุ)')}</div>
+        <div class="text-xs hint">UUID: <code>${pack_id}</code> • version: <code>[${version.join(', ')}]</code> • ${escapeHTML(from||'')}</div>
+      </div>`;
+    listEl.appendChild(row);
+  }
+
+  function prettySort(arr){
+    arr.sort((a,b)=>{
+      const n = (a.name||'').toString().localeCompare((b.name||'').toString(),'th');
+      if(n!==0) return n;
+      const av=a.version||[], bv=b.version||[];
+      for(let i=0;i<Math.max(av.length,bv.length);i++){
+        const ai=av[i]??0, bi=bv[i]??0;
+        if(ai!==bi) return bi-ai;
       }
-      updateOutputs();
+      return a.pack_id.localeCompare(b.pack_id);
+    });
+    return arr;
+  }
+
+  function isZipLike(name,type){
+    const n=(name||'').toLowerCase();
+    return type==='application/zip' || /\.(zip|mcpack|mcaddon)$/.test(n);
+  }
+
+  async function handleFiles(fileList){
+    const files = Array.from(fileList||[]);
+    if(!files.length) return;
+    RS.clear(); BH.clear(); listEl.innerHTML = '';
+    setWorking(true,'กำลังประมวลผล…');
+
+    for(const file of files){
+      try{
+        if(/manifest\.json$/i.test(file.name)){
+          const text = await file.text();
+          await handleManifest(await parseManifestText(text), file.name);
+        }else if(isZipLike(file.name, file.type)){
+          const zip = await JSZip.loadAsync(file);
+          const entry = Object.values(zip.files).find(f => /(^|\/)manifest\.json$/i.test(f.name));
+          if(!entry) throw new Error('ไม่พบ manifest.json');
+          const text = await entry.async('text');
+          await handleManifest(await parseManifestText(text), `${file.name} → ${entry.name}`);
+        }else{
+          // ข้ามไฟล์ที่ไม่รองรับ
+        }
+      }catch(e){
+        appendError(file.name + ': ' + (e?.message||e));
+      }
     }
-    async function handleManifest(obj,from){
-      const h=obj.header||{};
-      const uuid=h.uuid||h.pack_id;
-      const ver=h.version||[];
-      const name=h.name||'unknown';
-      const mods=obj.modules||[];
-      if(!uuid) return;
-      const pack_id=String(uuid);
-      const version=Array.isArray(ver)?ver:ver.toString().split('.').map(Number);
-      if(mods.some(m=>(m.type||'').toLowerCase()==='data')) BH.set(pack_id,{pack_id,version,name,from});
-      if(mods.some(m=>(m.type||'').toLowerCase()==='resources')) RS.set(pack_id,{pack_id,version,name,from});
-      // ถ้าไม่เจอ type เลย → จัดเป็น RS ดีฟอลต์
-      if(!mods.length) RS.set(pack_id,{pack_id,version,name,from});
-      const line=document.createElement('div');
-      line.textContent=`✔ ${name} (${pack_id})`;
-      list.appendChild(line);
+
+    // เสร็จ → ติ๊กถูก แล้วเปิดโมดัล + พิมพ์ผลแบบไทป์
+    setWorking(false,'เสร็จแล้ว! ✓');
+    sp.style.display='none';
+    done.classList.remove('hidden');
+    setTimeout(()=> openModalAndType(), 420);
+  }
+
+  function appendError(msg){
+    const row = document.createElement('div');
+    row.className = 'fade-in p-2 rounded-lg border border-red-600/25 bg-red-900/20 text-red-200 text-sm';
+    row.textContent = '❌ ' + msg;
+    listEl.appendChild(row);
+  }
+
+  async function parseManifestText(text){
+    let obj;
+    try{ obj = JSON.parse(text); }
+    catch{
+      try{
+        const fixed = text.replace(/^\s*"|"\s*$/g,'').replace(/\\n/g,'\\n');
+        obj = JSON.parse(JSON.parse('"' + fixed.replace(/"/g,'\\"') + '"'));
+      }catch{ throw new Error('อ่าน JSON ไม่ได้'); }
     }
-  </script>
+    return obj;
+  }
+
+  function classifyModules(mods){
+    let isRS=false, isBH=false;
+    if(Array.isArray(mods)){
+      for(const m of mods){
+        const t = (m?.type||'').toLowerCase();
+        if(t==='resources' || t==='client_data') isRS = true;
+        if(t==='data' || t==='script') isBH = true;
+      }
+    }
+    return {isRS, isBH};
+  }
+
+  async function handleManifest(obj, fromName){
+    const header = obj?.header || {};
+    const uuid = header.uuid || header.pack_id;
+    const version = header.version || header.pack_version;
+    const name = header.name || header.pack_name || 'Unknown';
+    const modules = obj?.modules || obj?.module || [];
+    if(!uuid || !version) throw new Error('ไม่พบ uuid/version');
+
+    const pack_id = String(uuid);
+    const verArr = Array.isArray(version) ? version.map(Number) : String(version).split('.').map(Number);
+
+    const {isRS, isBH} = classifyModules(modules);
+    let putRS=isRS, putBH=isBH;
+    if(!isRS && !isBH){ putRS = true; } // default เป็น RS
+
+    if(putRS){ RS.set(pack_id,{pack_id,version:verArr,name,from:fromName}); appendLine({name,pack_id,version:verArr,from:fromName,type:'RS'}); }
+    if(putBH){ BH.set(pack_id,{pack_id,version:verArr,name,from:fromName}); appendLine({name,pack_id,version:verArr,from:fromName,type:'BH'}); }
+  }
+
+  function buildJSON(){
+    const arrRS = prettySort(Array.from(RS.values())).map(({pack_id,version})=>({pack_id,version}));
+    const arrBH = prettySort(Array.from(BH.values())).map(({pack_id,version})=>({pack_id,version}));
+    return { rsText: JSON.stringify(arrRS, null, 2), bhText: JSON.stringify(arrBH, null, 2) };
+  }
+
+  // typewriter
+  async function typeOut(el, text){
+    el.textContent = '';
+    const delay = 6;
+    for(let i=0;i<text.length;i++){
+      el.textContent += text[i];
+      if(i%4===0) await new Promise(r=>setTimeout(r, delay));
+    }
+  }
+
+  function openModalAndType(){
+    const { rsText, bhText } = buildJSON();
+    modal.classList.add('open');
+    // พิมพ์สองฝั่งพร้อมกันแบบเด้งๆ
+    typeOut(outRS, rsText);
+    typeOut(outBH, bhText);
+  }
+  closeModal.onclick = ()=> modal.classList.remove('open');
+
+  // copy & download
+  async function copyText(t){ try{ await navigator.clipboard.writeText(t); toast('คัดลอกแล้ว ✓'); }catch{ toast('คัดลอกไม่สำเร็จ'); } }
+  function downloadText(t, name){
+    const blob = new Blob([t], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  }
+  copyRS.onclick = ()=> copyText(outRS.textContent);
+  copyBH.onclick = ()=> copyText(outBH.textContent);
+  dlRS.onclick   = ()=> downloadText(outRS.textContent, 'world_resource_packs.json');
+  dlBH.onclick   = ()=> downloadText(outBH.textContent, 'world_behavior_packs.json');
+
+  // toast เล็กๆ
+  function toast(msg){
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.position='fixed'; t.style.left='50%'; t.style.bottom='18px';
+    t.style.transform='translateX(-50%)'; t.style.background='#0b0613';
+    t.style.border='1px solid #512c9b'; t.style.color='#e9d5ff';
+    t.style.padding='10px 14px'; t.style.borderRadius='12px';
+    t.style.boxShadow='0 10px 40px rgba(124,58,237,.4)';
+    t.style.zIndex='60'; t.style.opacity='0';
+    document.body.appendChild(t);
+    requestAnimationFrame(()=>{
+      t.style.transition='opacity .25s ease, transform .25s ease';
+      t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(-6px)';
+      setTimeout(()=>{
+        t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(0)';
+        setTimeout(()=>t.remove(), 250);
+      }, 1500);
+    });
+  }
+
+  // UX: กดพื้นที่ลากแล้วก็เปิดเลือกไฟล์ได้
+  drop.addEventListener('click', ()=> fileInp.click());
+</script>
 </body>
 </html>
