@@ -32,20 +32,21 @@
     -webkit-background-clip:text;background-clip:text;color:transparent;
     text-shadow:0 10px 40px rgba(99,102,241,.45);filter:drop-shadow(0 10px 28px rgba(124,58,237,.35));
   }
+
   main.center{
     position:relative;z-index:2;display:grid;place-items:center;
     min-height:calc(100vh - 120px);
     padding:10px 16px 40px;
-    grid-template-rows:auto auto auto; /* เพิ่มแถวสำหรับแกลเลอรี่และปุ่มล้างไฟล์ */
+    grid-template-rows:auto auto auto;
     gap:14px;
   }
 
-  /* --- อัลบั้มแสดงไฟล์ที่อัปโหลด (อยู่เหนือปุ่มใหญ่) --- */
+  /* แกลเลอรี่ไฟล์ที่อัปโหลด (เหนือปุ่มใหญ่) */
   #uploads{
     width:min(1200px,95vw);
     display:grid;
     grid-auto-flow:column;
-    grid-auto-columns:180px;
+    grid-auto-columns:190px;
     gap:12px;
     overflow:auto hidden;
     padding:6px 4px 2px;
@@ -58,22 +59,26 @@
     border:1px solid rgba(167,139,250,.6);
     box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 18px 70px rgba(124,58,237,.45),0 0 80px rgba(96,165,250,.45);
     overflow:hidden;
-    display:flex;flex-direction:column;align-items:center;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   }
   #uploads .thumb{
-    width:100%;height:120px;object-fit:cover;background:#0b0a18;border-bottom:1px solid #231f3e
+    width:100%;height:140px;object-fit:cover;background:#0b0a18;border-bottom:1px solid #231f3e
   }
   #uploads .name{
     width:100%;
     padding:10px 10px 12px;
     font-size:13px;font-weight:800;letter-spacing:.2px;text-align:center;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background:none;
   }
   #uploads::-webkit-scrollbar{height:10px}
   #uploads::-webkit-scrollbar-thumb{background:#2a2750;border-radius:10px}
   #uploads::-webkit-scrollbar-track{background:#131129;border-radius:10px}
 
-  /* ปุ่มใหญ่ */
+  /* แถวปุ่มเลือก/ล้างไฟล์ */
+  .filebar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+
+  /* ปุ่มหลัก */
   #big{
     position:relative;cursor:pointer;user-select:none;outline:none;
     display:inline-flex;align-items:center;justify-content:center;gap:12px;
@@ -89,7 +94,7 @@
   #big svg{filter:drop-shadow(0 2px 8px rgba(255,255,255,.25))}
   .status{position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);font-size:13px;opacity:.9}
 
-  /* ปุ่ม “ล้างไฟล์” ใต้ปุ่มใหญ่ */
+  /* ปุ่มล้างไฟล์ (อยู่ข้างปุ่มใหญ่) */
   #clearFiles{
     border:none;border-radius:12px;padding:10px 16px;font-weight:800;color:#fff;
     background:linear-gradient(135deg,#9333ea,#2563eb);cursor:pointer;
@@ -152,20 +157,21 @@
   <!-- แกลเลอรี่ไฟล์ที่อัปโหลด -->
   <div id="uploads" aria-label="ไฟล์ที่อัปโหลด"></div>
 
-  <!-- ปุ่มเลือกไฟล์ -->
-  <button id="big" title="เลือกไฟล์หรือวางไฟล์บนปุ่มนี้">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="7 10 12 15 17 10"/>
-      <line x1="12" y1="15" x2="12" y2="3"/>
-    </svg>
-    เลือกไฟล์ / ลากมาวาง
-    <div id="status" class="status"></div>
-    <input id="file" type="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json">
-  </button>
+  <!-- ปุ่มเลือกไฟล์ + ล้างไฟล์ (ชิดกัน) -->
+  <div class="filebar">
+    <button id="big" title="เลือกไฟล์หรือวางไฟล์บนปุ่มนี้">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      เลือกไฟล์ / ลากมาวาง
+      <div id="status" class="status"></div>
+      <input id="file" type="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json">
+    </button>
 
-  <!-- ปุ่มล้างไฟล์ (ลืมไฟล์ที่เคยอัปโหลด เพื่อให้เลือกไฟล์เดิมได้ใหม่ + เคลียร์พรีวิว) -->
-  <button id="clearFiles">ล้างไฟล์</button>
+    <button id="clearFiles" class="btn">ล้างไฟล์</button>
+  </div>
 </main>
 
 <div id="fade" class="fadecover"></div>
@@ -236,7 +242,7 @@ file.onchange=()=>handleFiles(file.files);
 function isZipLike(n,t){n=(n||'').toLowerCase();return t==='application/zip'||/\.(zip|mcpack|mcaddon)$/.test(n)}
 function setLoading(on){statusEl.innerHTML=on?'<span class="spin"></span>กำลังประมวลผล…':''}
 
-const escRe = (s)=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const escRe = (s)=>s.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\$&');
 function listTopLevelDirs(zip){
   const set=new Set();
   for(const name of Object.keys(zip.files)){
@@ -281,7 +287,7 @@ function findIconPath(zip, basePrefix){
     const p = names.find(n => rx.test(n));
     if(p) return p;
   }
-  // เผื่อกรณีอยู่ใต้โฟลเดอร์เดียวกับ manifest (ไฟล์ใกล้เคียง)
+  // เผื่อกรณีชื่อไฟล์ใกล้เคียง
   const near = names.find(n => new RegExp(reBase+'[^/]*pack.*\\.(png|jpg|jpeg)$','i').test(n));
   return near || null;
 }
@@ -293,7 +299,7 @@ async function toDataURLFromZip(zip, path){
   return `data:${mime};base64,${b64}`;
 }
 
-/* อัปเดตแกลเลอรี่ */
+/* เรนเดอร์แกลเลอรี่ */
 function renderUploads(){
   uploadsEl.innerHTML = '';
   if(!UPLOADS.length){ uploadsEl.style.display='none'; return; }
@@ -308,8 +314,12 @@ function renderUploads(){
 }
 renderUploads();
 
+function cleanName(n){
+  return (n||'').replace(/§./g,'').trim(); // ลบ § และอักขระถัดไปทั้งหมด
+}
 function addUploadEntry(entry){
   if(UPLOADS.some(x=>x.id===entry.id)) return;
+  entry.name = cleanName(entry.name);
   UPLOADS.push(entry);
   persistAll();
   renderUploads();
@@ -341,7 +351,7 @@ async function handleFiles(list){
         const t=await f.text();
         const manifest = await parseManifestText(t);
         await handleManifest(manifest, false);
-        // ไม่มีไฟล์ภาพแนบ กรณี manifest เดี่ยว ข้ามพรีวิว
+        // manifest เดี่ยว: ไม่แสดงไอคอน
       }else if(isZipLike(f.name,f.type)){
         const zip=await JSZip.loadAsync(f);
         const topDirs = listTopLevelDirs(zip);
@@ -354,7 +364,6 @@ async function handleFiles(list){
             const isRS = dirHasTextures(zip, dir);
             await handleManifest(manifest, isRS);
 
-            // พรีวิว: ชื่อ + icon จากโฟลเดอร์เดียวกัน
             const base = dir;
             const iconPath = findIconPath(zip, base);
             if(iconPath){
@@ -371,7 +380,6 @@ async function handleFiles(list){
             const isRS = hasTexturesInZip(zip, manifestPath);
             await handleManifest(manifest, isRS);
 
-            // พรีวิวจากฐานเดียวกับ manifest
             const base = manifestPath.includes('/') ? manifestPath.split('/').slice(0,-1).join('/')+'/' : '';
             const iconPath = base ? findIconPath(zip, base) : null;
             if(iconPath){
@@ -408,8 +416,7 @@ async function handleManifest(obj, isRS){
   const version=Array.isArray(ver)?ver.map(Number):String(ver).split('.').map(Number);
   const key = `${isRS?'RS':'BH'}|${pack_id}|${Array.isArray(version)?version.join('.'):version}`;
 
-  // กันซ้ำระดับแพ็ก (ใช้ SEEN_PACKS เดิมผ่าน local state ชุดนี้)
-  if(!window.SEEN_PACKS){ 
+  if(!window.SEEN_PACKS){
     window.SEEN_PACKS = new Set([
       ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
       ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
@@ -436,27 +443,32 @@ async function copy(t){try{await navigator.clipboard.writeText(t);}catch{}}
 copyRS.onclick=()=>copy(outRS.textContent);
 copyBH.onclick=()=>copy(outBH.textContent);
 
-// ล้างรายการ RS/BH + seen + processed (ปุ่มในโมดัลเดิม)
+/* ปุ่ม “ล้างรายการ” ในโมดัล (ของเดิม) */
 resetBtn.onclick=()=>{
   RS_LIST.length=0;
   BH_LIST.length=0;
   if(window.SEEN_PACKS) window.SEEN_PACKS.clear();
   PROCESSED_FILES.clear();
-  UPLOADS.length = 0; // ให้สอดคล้องกับการ “ล้างรายการ” ทั้งหมด
+  UPLOADS.length = 0;
   persistAll();
   outRS.textContent='[]';
   outBH.textContent='[]';
   renderUploads();
 };
 
-/* ปุ่ม “ล้างไฟล์” ใต้ปุ่มใหญ่: ลืมไฟล์ที่เคยอัปโหลด (allow re-upload same files) + เคลียร์พรีวิว แต่ไม่ไปยุ่ง RS/BH */
+/* ปุ่ม “ล้างไฟล์” (ข้างปุ่มใหญ่) — ให้ทำงานเหมือน “ล้างรายการ” */
 clearFilesBtn.onclick=()=>{
+  RS_LIST.length=0;
+  BH_LIST.length=0;
+  if(window.SEEN_PACKS) window.SEEN_PACKS.clear();
   PROCESSED_FILES.clear();
-  UPLOADS.length = 0;
+  UPLOADS.length=0;
   persistAll();
+  outRS.textContent='[]';
+  outBH.textContent='[]';
   renderUploads();
-  statusEl.textContent = 'ลืมไฟล์ที่เคยอัปโหลดแล้ว';
-  setTimeout(()=>statusEl.textContent='', 1800);
+  statusEl.textContent='ล้างข้อมูลทั้งหมดแล้ว';
+  setTimeout(()=>statusEl.textContent='',1500);
 };
 
 /* ---------- Inline Service Worker (offline-first) ---------- */
@@ -464,14 +476,12 @@ clearFilesBtn.onclick=()=>{
   if (!('serviceWorker' in navigator)) return;
   try {
     const swCode = `
-      // Simple offline-first cache (inlined)
       const CACHE = 'uuid-extractor-v1';
       const ASSETS = [
         './',
         self.location.href,
         'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
       ];
-
       self.addEventListener('install', (e) => {
         e.waitUntil(
           caches.open(CACHE)
@@ -479,7 +489,6 @@ clearFilesBtn.onclick=()=>{
             .then(() => self.skipWaiting())
         );
       });
-
       self.addEventListener('activate', (e) => {
         e.waitUntil(
           caches.keys()
@@ -487,7 +496,6 @@ clearFilesBtn.onclick=()=>{
             .then(() => self.clients.claim())
         );
       });
-
       self.addEventListener('fetch', (e) => {
         const { request } = e;
         e.respondWith(
