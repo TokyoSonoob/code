@@ -36,7 +36,44 @@
     position:relative;z-index:2;display:grid;place-items:center;
     min-height:calc(100vh - 120px);
     padding:10px 16px 40px;
+    grid-template-rows:auto auto auto; /* เพิ่มแถวสำหรับแกลเลอรี่และปุ่มล้างไฟล์ */
+    gap:14px;
   }
+
+  /* --- อัลบั้มแสดงไฟล์ที่อัปโหลด (อยู่เหนือปุ่มใหญ่) --- */
+  #uploads{
+    width:min(1200px,95vw);
+    display:grid;
+    grid-auto-flow:column;
+    grid-auto-columns:180px;
+    gap:12px;
+    overflow:auto hidden;
+    padding:6px 4px 2px;
+    scrollbar-gutter:stable;
+  }
+  #uploads .card{
+    position:relative;
+    border-radius:16px;
+    background:linear-gradient(180deg, rgba(15,10,40,.9), rgba(10,8,28,.9));
+    border:1px solid rgba(167,139,250,.6);
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 18px 70px rgba(124,58,237,.45),0 0 80px rgba(96,165,250,.45);
+    overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  #uploads .thumb{
+    width:100%;height:120px;object-fit:cover;background:#0b0a18;border-bottom:1px solid #231f3e
+  }
+  #uploads .name{
+    width:100%;
+    padding:10px 10px 12px;
+    font-size:13px;font-weight:800;letter-spacing:.2px;text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #uploads::-webkit-scrollbar{height:10px}
+  #uploads::-webkit-scrollbar-thumb{background:#2a2750;border-radius:10px}
+  #uploads::-webkit-scrollbar-track{background:#131129;border-radius:10px}
+
+  /* ปุ่มใหญ่ */
   #big{
     position:relative;cursor:pointer;user-select:none;outline:none;
     display:inline-flex;align-items:center;justify-content:center;gap:12px;
@@ -51,6 +88,14 @@
   #big.drag{border-color:#a78bfa;box-shadow:0 20px 56px rgba(124,58,237,.5),inset 0 0 0 1px rgba(255,255,255,.1)}
   #big svg{filter:drop-shadow(0 2px 8px rgba(255,255,255,.25))}
   .status{position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);font-size:13px;opacity:.9}
+
+  /* ปุ่ม “ล้างไฟล์” ใต้ปุ่มใหญ่ */
+  #clearFiles{
+    border:none;border-radius:12px;padding:10px 16px;font-weight:800;color:#fff;
+    background:linear-gradient(135deg,#9333ea,#2563eb);cursor:pointer;
+    box-shadow:0 10px 30px rgba(99,102,241,.28);margin-top:2px
+  }
+
   .spin{width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin 1s linear infinite;vertical-align:-4px;display:inline-block;margin-right:8px}
   @keyframes spin{to{transform:rotate(360deg)}}
   .fadecover{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:40;transition:opacity .35s ease}
@@ -104,6 +149,10 @@
 <header class="top"><h1>Purple Shop</h1></header>
 
 <main class="center">
+  <!-- แกลเลอรี่ไฟล์ที่อัปโหลด -->
+  <div id="uploads" aria-label="ไฟล์ที่อัปโหลด"></div>
+
+  <!-- ปุ่มเลือกไฟล์ -->
   <button id="big" title="เลือกไฟล์หรือวางไฟล์บนปุ่มนี้">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -114,6 +163,9 @@
     <div id="status" class="status"></div>
     <input id="file" type="file" multiple hidden accept=".zip,.mcpack,.mcaddon,.json,application/zip,application/json">
   </button>
+
+  <!-- ปุ่มล้างไฟล์ (ลืมไฟล์ที่เคยอัปโหลด เพื่อให้เลือกไฟล์เดิมได้ใหม่ + เคลียร์พรีวิว) -->
+  <button id="clearFiles">ล้างไฟล์</button>
 </main>
 
 <div id="fade" class="fadecover"></div>
@@ -156,19 +208,21 @@ const modal=document.getElementById('modal'), fade=document.getElementById('fade
 const outRS=document.getElementById('outRS'), outBH=document.getElementById('outBH');
 const copyRS=document.getElementById('copyRS'), copyBH=document.getElementById('copyBH'), closeBtn=document.getElementById('close');
 const resetBtn=document.getElementById('reset');
+const uploadsEl=document.getElementById('uploads');
+const clearFilesBtn=document.getElementById('clearFiles');
 
 /* ===== Persistence & Dedup ===== */
 const RS_LIST = JSON.parse(localStorage.getItem('RS_LIST') || '[]');
 const BH_LIST = JSON.parse(localStorage.getItem('BH_LIST') || '[]');
 const PROCESSED_FILES = new Set(JSON.parse(localStorage.getItem('PROCESSED_FILES') || '[]'));
-const SEEN_PACKS = new Set([
-  ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
-  ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
-]);
+
+/* พรีวิวไฟล์ที่อัปโหลด */
+const UPLOADS = JSON.parse(localStorage.getItem('UPLOADS') || '[]'); // [{id,name,icon}]
 function persistAll(){
   localStorage.setItem('RS_LIST', JSON.stringify(RS_LIST));
   localStorage.setItem('BH_LIST', JSON.stringify(BH_LIST));
   localStorage.setItem('PROCESSED_FILES', JSON.stringify(Array.from(PROCESSED_FILES)));
+  localStorage.setItem('UPLOADS', JSON.stringify(UPLOADS));
 }
 const fileSig = f => `${f.name}|${f.size}|${f.lastModified}`;
 
@@ -213,6 +267,55 @@ function hasTexturesInZip(zip, manifestPath){
   return Object.keys(zip.files).some(name => re.test(name));
 }
 
+/* หา icon ในโฟลเดอร์แพ็ก */
+function findIconPath(zip, basePrefix){
+  const names = Object.keys(zip.files);
+  const reBase = '^'+escRe(basePrefix);
+  const candidates = [
+    new RegExp(reBase+'pack_icon\\.png$', 'i'),
+    new RegExp(reBase+'pack_icon\\.jpg$', 'i'),
+    new RegExp(reBase+'pack_icon\\.jpeg$', 'i'),
+    new RegExp(reBase+'textures/pack_icon\\.png$', 'i'),
+  ];
+  for(const rx of candidates){
+    const p = names.find(n => rx.test(n));
+    if(p) return p;
+  }
+  // เผื่อกรณีอยู่ใต้โฟลเดอร์เดียวกับ manifest (ไฟล์ใกล้เคียง)
+  const near = names.find(n => new RegExp(reBase+'[^/]*pack.*\\.(png|jpg|jpeg)$','i').test(n));
+  return near || null;
+}
+
+async function toDataURLFromZip(zip, path){
+  const ext = (path.split('.').pop()||'png').toLowerCase();
+  const mime = ext==='jpg'||ext==='jpeg' ? 'image/jpeg' : 'image/png';
+  const b64 = await zip.file(path).async('base64');
+  return `data:${mime};base64,${b64}`;
+}
+
+/* อัปเดตแกลเลอรี่ */
+function renderUploads(){
+  uploadsEl.innerHTML = '';
+  if(!UPLOADS.length){ uploadsEl.style.display='none'; return; }
+  uploadsEl.style.display='grid';
+  for(const u of UPLOADS){
+    const card = document.createElement('div'); card.className='card';
+    const img = document.createElement('img'); img.className='thumb'; img.alt=u.name||'pack'; img.src=u.icon || '';
+    const name = document.createElement('div'); name.className='name'; name.textContent=u.name || 'ไม่ทราบชื่อ';
+    card.appendChild(img); card.appendChild(name);
+    uploadsEl.appendChild(card);
+  }
+}
+renderUploads();
+
+function addUploadEntry(entry){
+  if(UPLOADS.some(x=>x.id===entry.id)) return;
+  UPLOADS.push(entry);
+  persistAll();
+  renderUploads();
+}
+
+/* จัดการไฟล์เข้า */
 async function handleFiles(list){
   let files = Array.from(list||[]);
   if (!files.length) return;
@@ -236,7 +339,9 @@ async function handleFiles(list){
     try{
       if(/manifest\.json$/i.test(f.name)){
         const t=await f.text();
-        await handleManifest(await parseManifestText(t), false);
+        const manifest = await parseManifestText(t);
+        await handleManifest(manifest, false);
+        // ไม่มีไฟล์ภาพแนบ กรณี manifest เดี่ยว ข้ามพรีวิว
       }else if(isZipLike(f.name,f.type)){
         const zip=await JSZip.loadAsync(f);
         const topDirs = listTopLevelDirs(zip);
@@ -245,15 +350,35 @@ async function handleFiles(list){
             const manifestPath = findManifestInDir(zip, dir);
             if(!manifestPath) continue;
             const text = await zip.file(manifestPath).async('text');
+            const manifest = await parseManifestText(text);
             const isRS = dirHasTextures(zip, dir);
-            await handleManifest(await parseManifestText(text), isRS);
+            await handleManifest(manifest, isRS);
+
+            // พรีวิว: ชื่อ + icon จากโฟลเดอร์เดียวกัน
+            const base = dir;
+            const iconPath = findIconPath(zip, base);
+            if(iconPath){
+              const dataUrl = await toDataURLFromZip(zip, iconPath);
+              const name = (manifest?.header?.name)||base.replace(/\/$/,'');
+              addUploadEntry({ id:`${fileSig(f)}|${base}`, name, icon:dataUrl });
+            }
           }
         }else{
           const manifestPath = findAnyManifest(zip);
           if(manifestPath){
             const text = await zip.file(manifestPath).async('text');
+            const manifest = await parseManifestText(text);
             const isRS = hasTexturesInZip(zip, manifestPath);
-            await handleManifest(await parseManifestText(text), isRS);
+            await handleManifest(manifest, isRS);
+
+            // พรีวิวจากฐานเดียวกับ manifest
+            const base = manifestPath.includes('/') ? manifestPath.split('/').slice(0,-1).join('/')+'/' : '';
+            const iconPath = base ? findIconPath(zip, base) : null;
+            if(iconPath){
+              const dataUrl = await toDataURLFromZip(zip, iconPath);
+              const name = (manifest?.header?.name)|| (base || f.name);
+              addUploadEntry({ id:`${fileSig(f)}|${base||'root'}`, name, icon:dataUrl });
+            }
           }
         }
       }
@@ -283,8 +408,15 @@ async function handleManifest(obj, isRS){
   const version=Array.isArray(ver)?ver.map(Number):String(ver).split('.').map(Number);
   const key = `${isRS?'RS':'BH'}|${pack_id}|${Array.isArray(version)?version.join('.'):version}`;
 
-  if (SEEN_PACKS.has(key)) return; // กันซ้ำระดับแพ็ก
-  SEEN_PACKS.add(key);
+  // กันซ้ำระดับแพ็ก (ใช้ SEEN_PACKS เดิมผ่าน local state ชุดนี้)
+  if(!window.SEEN_PACKS){ 
+    window.SEEN_PACKS = new Set([
+      ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+      ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+    ]);
+  }
+  if (window.SEEN_PACKS.has(key)) return;
+  window.SEEN_PACKS.add(key);
 
   const item={pack_id,version};
   if(isRS) RS_LIST.push(item); else BH_LIST.push(item);
@@ -304,15 +436,27 @@ async function copy(t){try{await navigator.clipboard.writeText(t);}catch{}}
 copyRS.onclick=()=>copy(outRS.textContent);
 copyBH.onclick=()=>copy(outBH.textContent);
 
-// ล้างรายการทั้งหมด
+// ล้างรายการ RS/BH + seen + processed (ปุ่มในโมดัลเดิม)
 resetBtn.onclick=()=>{
   RS_LIST.length=0;
   BH_LIST.length=0;
-  SEEN_PACKS.clear();
+  if(window.SEEN_PACKS) window.SEEN_PACKS.clear();
   PROCESSED_FILES.clear();
+  UPLOADS.length = 0; // ให้สอดคล้องกับการ “ล้างรายการ” ทั้งหมด
   persistAll();
   outRS.textContent='[]';
   outBH.textContent='[]';
+  renderUploads();
+};
+
+/* ปุ่ม “ล้างไฟล์” ใต้ปุ่มใหญ่: ลืมไฟล์ที่เคยอัปโหลด (allow re-upload same files) + เคลียร์พรีวิว แต่ไม่ไปยุ่ง RS/BH */
+clearFilesBtn.onclick=()=>{
+  PROCESSED_FILES.clear();
+  UPLOADS.length = 0;
+  persistAll();
+  renderUploads();
+  statusEl.textContent = 'ลืมไฟล์ที่เคยอัปโหลดแล้ว';
+  setTimeout(()=>statusEl.textContent='', 1800);
 };
 
 /* ---------- Inline Service Worker (offline-first) ---------- */
