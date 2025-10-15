@@ -352,25 +352,25 @@ async function toDataURLFromZip(zip, path){
   return `data:${mime};base64,${b64}`;
 }
 function syncListsToUploads(){
-  // เก็บ packId จากการ์ดที่ยังอยู่ ณ ปัจจุบัน
+  // ดึง packId ของการ์ดที่ยังอยู่ตอนนี้
   const keep = new Set(
-    UPLOADS
+    (Array.isArray(UPLOADS) ? UPLOADS : [])
       .map(u => (u && u.packId ? String(u.packId) : ''))
       .filter(Boolean)
   );
 
-  // ถ้าไม่มีการ์ดเลย ให้ลบทั้งหมด
-  const shouldKeep = keep.size > 0 ? (id)=>keep.has(String(id)) : ()=>false;
+  // ถ้าไม่พบ packId เลย -> ไม่แตะต้อง RS/BH (ป้องกันล้างหมด)
+  if (keep.size === 0) return;
 
-  // กรอง RS/BH ให้คงเฉพาะที่ยังมีการ์ดอยู่
+  // กรอง RS/BH ให้คงเฉพาะ pack_id ที่ยังมีการ์ดอยู่
   for (let i = RS_LIST.length - 1; i >= 0; i--){
-    if (!shouldKeep(RS_LIST[i].pack_id)) RS_LIST.splice(i, 1);
+    if (!keep.has(String(RS_LIST[i].pack_id))) RS_LIST.splice(i, 1);
   }
   for (let i = BH_LIST.length - 1; i >= 0; i--){
-    if (!shouldKeep(BH_LIST[i].pack_id)) BH_LIST.splice(i, 1);
+    if (!keep.has(String(BH_LIST[i].pack_id))) BH_LIST.splice(i, 1);
   }
 
-  // รีบิลด์ชุดกันซ้ำสำหรับ parser
+  // รีบิลด์ชุดกันซ้ำ
   if (window.SEEN_PACKS){
     window.SEEN_PACKS = new Set([
       ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
@@ -379,15 +379,16 @@ function syncListsToUploads(){
   }
 }
 
+
 function deleteUpload(index){
   if(index < 0 || index >= UPLOADS.length) return;
 
-  // ลบการ์ดออกก่อน
   const removed = UPLOADS.splice(index, 1)[0];
 
-  // ลบ UUID แบบเจาะจงถ้าทราบ packId
+  // ถ้าการ์ดมี packId -> ลบ UUID ที่ตรงกันทั้ง RS/BH
   if (removed && removed.packId){
     const pid = String(removed.packId);
+
     for (let i = RS_LIST.length - 1; i >= 0; i--){
       if (String(RS_LIST[i].pack_id) === pid) RS_LIST.splice(i, 1);
     }
@@ -396,16 +397,16 @@ function deleteUpload(index){
     }
   }
 
-  // กันพลาด: ซิงค์ RS/BH ให้เหลือเฉพาะแอดออนที่ยังมีการ์ดอยู่
+  // กันพลาด: prune เฉพาะกรณีที่ยังเหลือการ์ดที่มี packId
   syncListsToUploads();
 
-  // เซฟ + รีเฟรช
   persistAll();
   renderUploads();
 
-  statusEl.textContent = 'ลบแล้ว และล้าง UUID ทั้ง RS/BH ตามการ์ดที่เหลือ';
+  statusEl.textContent = 'ลบแล้ว และล้าง UUID ที่เกี่ยวข้อง (RS/BH)';
   setTimeout(()=>statusEl.textContent='',1500);
 }
+
 
 
 
