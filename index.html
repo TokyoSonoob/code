@@ -50,7 +50,7 @@
     grid-auto-columns:200px;
     gap:12px;
     overflow:auto hidden;
-    padding:10px;                          /* เพิ่มพื้นหลัง/ขอบกลบแสงซ้ายให้เหมือนขวา */
+    padding:10px;
     background:linear-gradient(180deg, rgba(12,10,28,.85), rgba(10,8,26,.85));
     border:1px solid rgba(167,139,250,.18);
     border-radius:18px;
@@ -77,7 +77,7 @@
     background:none;
   }
 
-  /* === ปุ่มลบการ์ด X มุมขวาบน === */
+  /* === ปุ่มลบ X มุมขวาบน === */
   #uploads .del{
     position:absolute;top:6px;right:6px;
     width:28px;height:28px;border-radius:9999px;
@@ -165,7 +165,7 @@
 
   /* ===== Mobile tweaks ===== */
   @media (max-width: 640px){
-    body{ overflow:auto; } /* ให้เลื่อนหน้าได้บนจอเล็ก */
+    body{ overflow:auto; }
     #uploads{ grid-auto-columns:150px; gap:10px; padding:8px; }
     #uploads .thumb{ height:120px; }
     #uploads .name{ font-size:12px; padding:6px 8px 10px; }
@@ -175,7 +175,7 @@
     .neon{ padding:12px; border-radius:16px; }
     pre{ font-size:12px; max-height:50vh; }
     .panel{ width:96vw; }
-    .grid{ grid-template-columns:1fr; } /* modal แสดงซ้อนลงมาเป็นคอลัมน์เดียว */
+    .grid{ grid-template-columns:1fr; }
   }
 </style>
 </head>
@@ -186,10 +186,8 @@
 <header class="top"><h1>Purple Shop</h1></header>
 
 <main class="center">
-  <!-- แกลเลอรี่ไฟล์ที่อัปโหลด -->
   <div id="uploads" aria-label="ไฟล์ที่อัปโหลด"></div>
 
-  <!-- ปุ่ม โชว์ UUID / เลือกไฟล์ / ล้างไฟล์ -->
   <div class="filebar">
     <button id="showUUID" class="btn" title="แสดงรายการ UUID">โชว์ UUID</button>
 
@@ -266,14 +264,31 @@ function persistAll(){
   localStorage.setItem('UPLOADS', JSON.stringify(UPLOADS));
 }
 
-/* ——— เคลียร์การ์ดซ้ำที่เคยเซฟทับชื่อเดียวกัน (เก็บใบแรกไว้) ——— */
-(function dedupeUploadsByName(){
+/* ——— Dedupe ตอนเริ่ม: ให้เหลือ 1 ใบต่อแอดออน โดยอิง packId ก่อน ——— */
+(function dedupeUploadsOnBoot(){
   if (!Array.isArray(UPLOADS) || !UPLOADS.length) return;
-  const seen = new Set();
-  for (let i = UPLOADS.length - 1; i >= 0; i--) {
-    const key = (UPLOADS[i]?.name || '').replace(/§./g,'').trim().toLowerCase();
-    if (seen.has(key)) UPLOADS.splice(i,1);
-    else seen.add(key);
+  const byId = new Map(); // packId -> index ที่เก็บไว้
+  for (let i=0;i<UPLOADS.length;i++){
+    const u = UPLOADS[i] || {};
+    const pid = u.packId ? String(u.packId) : '';
+    const nameKey = (u.name||'').replace(/§./g,'').trim().toLowerCase();
+
+    // ถ้ามี packId ให้ใช้ตัดสิน
+    if (pid){
+      if (!byId.has(pid)) byId.set(pid, i);
+      else {
+        // เก็บใบแรกไว้ ลบใบหลัง
+        UPLOADS.splice(i,1); i--;
+      }
+      continue;
+    }
+    // ไม่มี packId → กันซ้ำด้วยชื่อ (เฉพาะเคสเก่า)
+    for (let j=i+1;j<UPLOADS.length;j++){
+      const v = UPLOADS[j] || {};
+      if (!v) continue;
+      const nameKey2 = (v.name||'').replace(/§./g,'').trim().toLowerCase();
+      if (nameKey2===nameKey){ UPLOADS.splice(j,1); j--; }
+    }
   }
   persistAll();
 })();
@@ -281,8 +296,7 @@ function persistAll(){
 /* Utils */
 const fileSig = f => `${f.name}|${f.size}|${f.lastModified}`;
 const escRe = (s)=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-
-function cleanName(n){ return (n||'').replace(/§./g,'').trim(); } // ลบ § และตัวถัดไป
+const cleanName = n => (n||'').replace(/§./g,'').trim();
 
 /* UI bindings */
 big.addEventListener('click',()=>file.click());
@@ -334,7 +348,7 @@ function findIconPath(zip, basePrefix){
   const candidates = [
     new RegExp(reBase+'pack_icon\\.png$', 'i'),
     new RegExp(reBase+'pack_icon\\.jpg$', 'i'),
-       new RegExp(reBase+'pack_icon\\.jpeg$', 'i'),
+    new RegExp(reBase+'pack_icon\\.jpeg$', 'i'),
     new RegExp(reBase+'textures/pack_icon\\.png$', 'i'),
   ];
   for(const rx of candidates){
@@ -351,18 +365,16 @@ async function toDataURLFromZip(zip, path){
   const b64 = await zip.file(path).async('base64');
   return `data:${mime};base64,${b64}`;
 }
+
+/* ===== ซิงก์ RS/BH ให้สอดคล้องกับการ์ดที่ยังอยู่ (ปลอดภัย) ===== */
 function syncListsToUploads(){
-  // ดึง packId ของการ์ดที่ยังอยู่ตอนนี้
   const keep = new Set(
     (Array.isArray(UPLOADS) ? UPLOADS : [])
       .map(u => (u && u.packId ? String(u.packId) : ''))
       .filter(Boolean)
   );
+  if (keep.size === 0) return; // ไม่มี packId เหลือ → ไม่แตะต้อง
 
-  // ถ้าไม่พบ packId เลย -> ไม่แตะต้อง RS/BH (ป้องกันล้างหมด)
-  if (keep.size === 0) return;
-
-  // กรอง RS/BH ให้คงเฉพาะ pack_id ที่ยังมีการ์ดอยู่
   for (let i = RS_LIST.length - 1; i >= 0; i--){
     if (!keep.has(String(RS_LIST[i].pack_id))) RS_LIST.splice(i, 1);
   }
@@ -370,7 +382,6 @@ function syncListsToUploads(){
     if (!keep.has(String(BH_LIST[i].pack_id))) BH_LIST.splice(i, 1);
   }
 
-  // รีบิลด์ชุดกันซ้ำ
   if (window.SEEN_PACKS){
     window.SEEN_PACKS = new Set([
       ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
@@ -379,16 +390,14 @@ function syncListsToUploads(){
   }
 }
 
-
+/* ===== ลบการ์ด + ล้าง UUID ที่เกี่ยวข้อง ===== */
 function deleteUpload(index){
   if(index < 0 || index >= UPLOADS.length) return;
 
   const removed = UPLOADS.splice(index, 1)[0];
 
-  // ถ้าการ์ดมี packId -> ลบ UUID ที่ตรงกันทั้ง RS/BH
   if (removed && removed.packId){
     const pid = String(removed.packId);
-
     for (let i = RS_LIST.length - 1; i >= 0; i--){
       if (String(RS_LIST[i].pack_id) === pid) RS_LIST.splice(i, 1);
     }
@@ -397,9 +406,7 @@ function deleteUpload(index){
     }
   }
 
-  // กันพลาด: prune เฉพาะกรณีที่ยังเหลือการ์ดที่มี packId
   syncListsToUploads();
-
   persistAll();
   renderUploads();
 
@@ -407,10 +414,7 @@ function deleteUpload(index){
   setTimeout(()=>statusEl.textContent='',1500);
 }
 
-
-
-
-/* เรนเดอร์แกลเลอรี่ (เพิ่มปุ่มลบ X) */
+/* ===== เรนเดอร์แกลเลอรี่ (มีปุ่มลบ X) ===== */
 function renderUploads(){
   uploadsEl.innerHTML = '';
   if(!UPLOADS.length){ uploadsEl.style.display='none'; return; }
@@ -423,7 +427,6 @@ function renderUploads(){
     del.innerHTML='<span>×</span>';
     del.onclick=(ev)=>{ev.stopPropagation();deleteUpload(i);};
     del.onkeydown=(ev)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();deleteUpload(i);}};
-
     const img=document.createElement('img');img.className='thumb';img.alt=u.name||'pack';img.src=u.icon||'';
     const name=document.createElement('div');name.className='name';name.textContent=u.name||'ไม่ทราบชื่อ';
 
@@ -435,37 +438,37 @@ function renderUploads(){
 }
 renderUploads();
 
-/* === แสดงการ์ดเดียวต่อ “ชื่อแอดออน” + อัปเกรดไอคอนถ้าดีกว่า === */
+/* === เพิ่มการ์ด: หนึ่งแอดออนหนึ่งใบ (ใช้ packId เป็นหลัก) === */
 function addUploadEntry(entry){
-  // entry: { packId, name, icon, quality }
-  if(!entry.packId) return; // ต้องมี uuid ของแพ็ก
+  if(!entry.packId) return;
+  const pid = String(entry.packId);
   const displayName = cleanName(entry.name);
-  const nameKey = displayName.toLowerCase();
+  const newQ = Number(entry.quality||0);
 
-  // หาใบที่มีชื่อเดียวกันอยู่แล้วไหม
-  const idx = UPLOADS.findIndex(x => cleanName(x.name).toLowerCase() === nameKey);
-
-  if (idx >= 0) {
-    // มีแล้ว → อัปเกรดถ้าใบใหม่ดีกว่า (เช่น RS มีไอคอน/คุณภาพสูงกว่า)
-    const cur = UPLOADS[idx];
+  // หาใบที่มี packId ตรงกันก่อน
+  const idxById = UPLOADS.findIndex(x => String(x.packId) === pid);
+  if (idxById >= 0){
+    const cur = UPLOADS[idxById];
     const curQ = Number(cur.quality||0);
-    const newQ = Number(entry.quality||0);
-    const shouldUpgrade =
-      (newQ > curQ) || (!cur.icon && entry.icon); // ไร้ไอคอนเดิม แต่ใหม่มี
-    if (shouldUpgrade) {
-      UPLOADS[idx] = { packId: entry.packId, name: displayName, icon: entry.icon||cur.icon||'', quality: newQ||curQ };
+    if (newQ > curQ || (!cur.icon && entry.icon)){
+      UPLOADS[idxById] = { packId: pid, name: displayName, icon: entry.icon||cur.icon||'', quality: Math.max(newQ,curQ) };
       persistAll(); renderUploads();
     }
-    return; // ไม่เพิ่มใบใหม่
+    return;
   }
 
-  // ยังไม่มีชื่อซ้ำ → เพิ่มการ์ด
-  UPLOADS.push({ packId: entry.packId, name: displayName, icon: entry.icon||'', quality: entry.quality||0 });
+  // เผื่อกรณีเก่าที่เคยเก็บด้วยชื่อซ้ำ — ลบออกแล้วแทนด้วยใบที่อิง packId
+  const idxByName = UPLOADS.findIndex(x => cleanName(x.name).toLowerCase() === displayName.toLowerCase());
+  if (idxByName >= 0){
+    UPLOADS.splice(idxByName,1);
+  }
+
+  UPLOADS.push({ packId: pid, name: displayName, icon: entry.icon||'', quality: newQ });
   persistAll();
   renderUploads();
 }
 
-/* จัดการไฟล์เข้า */
+/* ===== จัดการไฟล์เข้า ===== */
 async function handleFiles(list){
   let files = Array.from(list||[]);
   if (!files.length) return;
@@ -568,15 +571,16 @@ async function handleManifest(obj, isRS){
 
 /* ===== ทำให้ version อยู่บรรทัดเดียว ===== */
 function buildJSON(){
-  const fmt = (arr) => {
+  const oneLineVersion = (arr) => {
     const pretty = JSON.stringify(arr, null, 2);
     return pretty.replace(/("version"\s*:\s*)\[\s*([\s\d,]+?)\s*\]/g, (_, p1, nums) => {
       const parts = nums.split(',').map(s=>s.trim()).filter(Boolean);
       return `${p1}[${parts.join(', ')}]`;
     });
   };
-  return { rs: fmt(RS_LIST), bh: fmt(BH_LIST) };
+  return { rs: oneLineVersion(RS_LIST), bh: oneLineVersion(BH_LIST) };
 }
+
 async function typeOut(el,text){el.textContent='';const d=5;for(let i=0;i<text.length;i++){el.textContent+=text[i];if(i%3===0) await new Promise(r=>setTimeout(r,d));}}
 function openModal(){const {rs,bh}=buildJSON(); modal.classList.add('open'); typeOut(outRS,rs); typeOut(outBH,bh);}
 closeBtn.onclick=()=>modal.classList.remove('open');
@@ -590,7 +594,7 @@ resetBtn.onclick=(()=>{
   const clearAll=()=>{
     RS_LIST.length=0; BH_LIST.length=0;
     if(window.SEEN_PACKS) window.SEEN_PACKS.clear();
-    PROCESSED_FILES.clear?.(); // เผื่อยังอยู่จากเวอร์ชันก่อน
+    if (PROCESSED_FILES && typeof PROCESSED_FILES.clear==='function') PROCESSED_FILES.clear();
     UPLOADS.length=0;
     persistAll();
     outRS.textContent='[]'; outBH.textContent='[]';
@@ -599,7 +603,7 @@ resetBtn.onclick=(()=>{
   return clearAll;
 })();
 
-/* ปุ่ม “ล้างไฟล์” (ข้างปุ่มใหญ่) — ให้ทำงานเหมือน “ล้างรายการ” */
+/* ปุ่ม “ล้างไฟล์” */
 clearFilesBtn.onclick=()=>{
   resetBtn.onclick();
   statusEl.textContent='ล้างข้อมูลทั้งหมดแล้ว';
