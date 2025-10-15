@@ -354,11 +354,43 @@ async function toDataURLFromZip(zip, path){
 
 /* ===== ปุ่มลบรายการในการ์ด ===== */
 function deleteUpload(index){
-  if(index<0 || index>=UPLOADS.length) return;
-  UPLOADS.splice(index,1);
+  if(index < 0 || index >= UPLOADS.length) return;
+
+  // เอารายการที่ถูกลบออกจากแกลเลอรี่ก่อน
+  const removed = UPLOADS.splice(index, 1)[0];
+
+  // ถ้ามี packId ให้ "ลืม" UUID ที่เกี่ยวข้องใน RS_LIST / BH_LIST ด้วย
+  if (removed && removed.packId){
+    const pid = String(removed.packId);
+
+    // ลบทุกเวอร์ชันของแอดออนนี้ใน RS
+    for (let i = RS_LIST.length - 1; i >= 0; i--){
+      if (String(RS_LIST[i].pack_id) === pid){
+        RS_LIST.splice(i, 1);
+      }
+    }
+    // ลบทุกเวอร์ชันของแอดออนนี้ใน BH
+    for (let i = BH_LIST.length - 1; i >= 0; i--){
+      if (String(BH_LIST[i].pack_id) === pid){
+        BH_LIST.splice(i, 1);
+      }
+    }
+
+    // รีเฟรชชุดกันซ้ำที่ใช้ตอน parse (ถ้ามี)
+    if (window.SEEN_PACKS){
+      window.SEEN_PACKS = new Set([
+        ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+        ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+      ]);
+    }
+  }
+
+  // เซฟและรีเฟรช UI
   persistAll();
   renderUploads();
-  statusEl.textContent='ลบรายการแล้ว';
+
+  // ข้อความสถานะสั้น ๆ
+  statusEl.textContent = 'ลบรายการแล้ว และลบ UUID ที่เกี่ยวข้อง';
   setTimeout(()=>statusEl.textContent='',1200);
 }
 
