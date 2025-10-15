@@ -50,7 +50,7 @@
     grid-auto-columns:200px;
     gap:12px;
     overflow:auto hidden;
-    padding:10px;
+    padding:10px;                          /* เพิ่มพื้นหลัง/ขอบกลบแสงซ้ายให้เหมือนขวา */
     background:linear-gradient(180deg, rgba(12,10,28,.85), rgba(10,8,26,.85));
     border:1px solid rgba(167,139,250,.18);
     border-radius:18px;
@@ -147,6 +147,20 @@
   pre::-webkit-scrollbar-thumb{background:#2a2750;border-radius:10px}
   pre::-webkit-scrollbar-track{background:#131129;border-radius:10px}
   .btnbar{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+
+  /* ===== Mobile tweaks ===== */
+  @media (max-width: 640px){
+    body{ overflow:auto; } /* ให้เลื่อนหน้าได้บนจอเล็ก */
+    #uploads{ grid-auto-columns:150px; gap:10px; padding:8px; }
+    #uploads .thumb{ height:120px; }
+    #uploads .name{ font-size:12px; padding:6px 8px 10px; }
+    #big{ width:100%; min-width:unset; height:64px; }
+    .status{ bottom:-22px; font-size:12px; }
+    .neon{ padding:12px; border-radius:16px; }
+    pre{ font-size:12px; max-height:50vh; }
+    .panel{ width:96vw; }
+    .grid{ grid-template-columns:1fr; } /* modal แสดงซ้อนลงมาเป็นคอลัมน์เดียว */
+  }
 </style>
 </head>
 <body>
@@ -337,7 +351,7 @@ function renderUploads(){
 }
 renderUploads();
 
-/* === เพิ่ม logic: แสดงการ์ดเดียวต่อ “ชื่อแอดออน” พร้อมอัปเกรดไอคอนถ้าดีกว่า === */
+/* === แสดงการ์ดเดียวต่อ “ชื่อแอดออน” + อัปเกรดไอคอนถ้าดีกว่า === */
 function addUploadEntry(entry){
   // entry: { packId, name, icon, quality }
   if(!entry.packId) return; // ต้องมี uuid ของแพ็ก
@@ -473,12 +487,22 @@ async function handleManifest(obj, isRS){
   if(isRS) RS_LIST.push(item); else BH_LIST.push(item);
 }
 
+/* ===== ทำให้ version อยู่บรรทัดเดียว ===== */
 function buildJSON(){
+  const fmt = (arr) => {
+    const pretty = JSON.stringify(arr, null, 2);
+    // จับเฉพาะ "version": [ ... ] แล้วบีบให้เป็นบรรทัดเดียว
+    return pretty.replace(/("version"\s*:\s*)\[\s*([\s\d,]+?)\s*\]/g, (_, p1, nums) => {
+      const parts = nums.split(',').map(s=>s.trim()).filter(Boolean);
+      return `${p1}[${parts.join(', ')}]`;
+    });
+  };
   return {
-    rs: JSON.stringify(RS_LIST,null,2),
-    bh: JSON.stringify(BH_LIST,null,2),
+    rs: fmt(RS_LIST),
+    bh: fmt(BH_LIST),
   };
 }
+
 async function typeOut(el,text){el.textContent='';const d=5;for(let i=0;i<text.length;i++){el.textContent+=text[i];if(i%3===0) await new Promise(r=>setTimeout(r,d));}}
 function openModal(){const {rs,bh}=buildJSON(); modal.classList.add('open'); typeOut(outRS,rs); typeOut(outBH,bh);}
 closeBtn.onclick=()=>modal.classList.remove('open');
