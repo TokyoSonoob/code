@@ -223,21 +223,36 @@ const clearFilesBtn=document.getElementById('clearFiles');
 const showUUIDBtn=document.getElementById('showUUID');
 
 /* ===== Persistence & Dedup ===== */
-const RS_LIST = JSON.parse(localStorage.getItem('RS_LIST') || '[]'); // [{pack_id,version}]
+const RS_LIST = JSON.parse(localStorage.getItem('RS_LIST') || '[]');
 const BH_LIST = JSON.parse(localStorage.getItem('BH_LIST') || '[]');
 const PROCESSED_FILES = new Set(JSON.parse(localStorage.getItem('PROCESSED_FILES') || '[]'));
 
-/* แกลเลอรี่: 1 การ์ด/uuid */
-const UPLOADS = JSON.parse(localStorage.getItem('UPLOADS') || '[]'); // [{packId,name,icon}]
+/* พรีวิวไฟล์ที่อัปโหลด (เก็บ packId เพื่อกันซ้ำระดับแอดออน) */
+const UPLOADS = JSON.parse(localStorage.getItem('UPLOADS') || '[]'); // [{packId,name,icon,quality}]
 function persistAll(){
   localStorage.setItem('RS_LIST', JSON.stringify(RS_LIST));
   localStorage.setItem('BH_LIST', JSON.stringify(BH_LIST));
   localStorage.setItem('PROCESSED_FILES', JSON.stringify(Array.from(PROCESSED_FILES)));
   localStorage.setItem('UPLOADS', JSON.stringify(UPLOADS));
 }
+
+/* ——— เคลียร์การ์ดซ้ำที่เคยเซฟทับชื่อเดียวกัน (เก็บใบแรกไว้) ——— */
+(function dedupeUploadsByName(){
+  if (!Array.isArray(UPLOADS) || !UPLOADS.length) return;
+  const seen = new Set();
+  for (let i = UPLOADS.length - 1; i >= 0; i--) { // เดินย้อนเพื่อคงใบแรกสุดไว้
+    const key = (UPLOADS[i]?.name || '').replace(/§./g,'').trim().toLowerCase();
+    if (seen.has(key)) UPLOADS.splice(i,1);
+    else seen.add(key);
+  }
+  persistAll();
+})();
+
+/* Utils */
 const fileSig = f => `${f.name}|${f.size}|${f.lastModified}`;
-const escRe = (s)=>s.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\$&');
-const cleanName = (n)=> (n||'').replace(/§./g,'').trim(); // ลบ § และตัวถัดไป
+const escRe = (s)=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+
+function cleanName(n){ return (n||'').replace(/§./g,'').trim(); } // ลบ § และตัวถัดไป
 
 /* UI bindings */
 big.addEventListener('click',()=>file.click());
@@ -246,7 +261,7 @@ big.addEventListener('click',()=>file.click());
 big.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
 file.onchange=()=>handleFiles(file.files);
 
-/* show UUID modal */
+/* Show UUID modal */
 showUUIDBtn.onclick=()=>openModal();
 
 function isZipLike(n,t){n=(n||'').toLowerCase();return t==='application/zip'||/\.(zip|mcpack|mcaddon)$/.test(n)}
@@ -278,8 +293,8 @@ function findAnyManifest(zip){
 }
 function hasTexturesInZip(zip, manifestPath){
   const base = manifestPath.includes('/') ? manifestPath.split('/').slice(0,-1).join('/')+'/' : '';
-  const re = new RegExp('^'+base.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\$&')+'textures/','i');
-  return Object.keys(zip.files).some name => re.test(name);
+  const re = new RegExp('^'+base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'textures/','i');
+  return Object.keys(zip.files).some(name => re.test(name));
 }
 
 /* หา icon ในโฟลเดอร์แพ็ก */
@@ -322,12 +337,32 @@ function renderUploads(){
 }
 renderUploads();
 
+/* === เพิ่ม logic: แสดงการ์ดเดียวต่อ “ชื่อแอดออน” พร้อมอัปเกรดไอคอนถ้าดีกว่า === */
 function addUploadEntry(entry){
-  // แสดง 1 การ์ดต่อ uuid
-  if(!entry.packId) return;
-  if(UPLOADS.some(x=>x.packId===entry.packId)) return;
-  entry.name = cleanName(entry.name);
-  UPLOADS.push({ packId: entry.packId, name: entry.name, icon: entry.icon||'' });
+  // entry: { packId, name, icon, quality }
+  if(!entry.packId) return; // ต้องมี uuid ของแพ็ก
+  const displayName = cleanName(entry.name);
+  const nameKey = displayName.toLowerCase();
+
+  // หาใบที่มีชื่อเดียวกันอยู่แล้วไหม
+  const idx = UPLOADS.findIndex(x => cleanName(x.name).toLowerCase() === nameKey);
+
+  if (idx >= 0) {
+    // มีแล้ว → อัปเกรดถ้าใบใหม่ดีกว่า (เช่น RS มีไอคอน/คุณภาพสูงกว่า)
+    const cur = UPLOADS[idx];
+    const curQ = Number(cur.quality||0);
+    const newQ = Number(entry.quality||0);
+    const shouldUpgrade =
+      (newQ > curQ) || (!cur.icon && entry.icon); // ไร้ไอคอนเดิม แต่ใหม่มี
+    if (shouldUpgrade) {
+      UPLOADS[idx] = { packId: entry.packId, name: displayName, icon: entry.icon||cur.icon||'', quality: newQ||curQ };
+      persistAll(); renderUploads();
+    }
+    return; // ไม่เพิ่มใบใหม่
+  }
+
+  // ยังไม่มีชื่อซ้ำ → เพิ่มการ์ด
+  UPLOADS.push({ packId: entry.packId, name: displayName, icon: entry.icon||'', quality: entry.quality||0 });
   persistAll();
   renderUploads();
 }
@@ -358,7 +393,8 @@ async function handleFiles(list){
         const t=await f.text();
         const manifest = await parseManifestText(t);
         await handleManifest(manifest, false);
-      }else if(/\.(zip|mcpack|mcaddon)$/i.test(f.name)||f.type==='application/zip'){
+        // ไม่เพิ่มพรีวิว เพราะไม่มี icon ในไฟล์เดี่ยว
+      }else if(isZipLike(f.name,f.type)){
         const zip=await JSZip.loadAsync(f);
         const topDirs = listTopLevelDirs(zip);
         if(topDirs.length>=1){
@@ -375,7 +411,8 @@ async function handleFiles(list){
             if(packId && iconPath){
               const dataUrl = await toDataURLFromZip(zip, iconPath);
               const name = (manifest?.header?.name)||dir.replace(/\/$/,'');
-              addUploadEntry({ packId, name, icon:dataUrl });
+              // quality: RS=2, BH=1
+              addUploadEntry({ packId, name, icon:dataUrl, quality: isRS?2:1 });
             }
           }
         }else{
@@ -392,7 +429,7 @@ async function handleFiles(list){
             if(packId && iconPath){
               const dataUrl = await toDataURLFromZip(zip, iconPath);
               const name = (manifest?.header?.name)|| (base || f.name);
-              addUploadEntry({ packId, name, icon:dataUrl });
+              addUploadEntry({ packId, name, icon:dataUrl, quality: isRS?2:1 });
             }
           }
         }
@@ -416,30 +453,27 @@ async function parseManifestText(text){
     }catch{ return {}; }
   }
 }
-
-/* ===== เก็บ RS/BH แบบ 1 รายการต่อ uuid ===== */
-function normVersion(ver){
-  if(Array.isArray(ver)) return ver.map(n=>Number(n)||0);
-  return String(ver).split('.').map(n=>Number(n)||0);
-}
-function addPackOnce(list, pack_id, version){
-  if(!pack_id) return;
-  if(list.some(p=>p.pack_id===pack_id)) return; // เจอแล้วข้าม
-  list.push({ pack_id, version: normVersion(version) });
-}
-
 async function handleManifest(obj, isRS){
   const h=obj?.header||{}; const uuid=h.uuid||h.pack_id; const ver=h.version||h.pack_version;
   if(!uuid||!ver) return;
   const pack_id=String(uuid);
+  const version=Array.isArray(ver)?ver.map(Number):String(ver).split('.').map(Number);
+  const key = `${isRS?'RS':'BH'}|${pack_id}|${Array.isArray(version)?version.join('.'):version}`;
 
-  if(isRS) addPackOnce(RS_LIST, pack_id, ver);
-  else addPackOnce(BH_LIST, pack_id, ver);
+  if(!window.SEEN_PACKS){
+    window.SEEN_PACKS = new Set([
+      ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+      ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+    ]);
+  }
+  if (window.SEEN_PACKS.has(key)) return;
+  window.SEEN_PACKS.add(key);
+
+  const item={pack_id,version};
+  if(isRS) RS_LIST.push(item); else BH_LIST.push(item);
 }
 
-/* ===== modal helpers ===== */
 function buildJSON(){
-  // ตรงตามรูปแบบที่ผู้ใช้ต้องการ
   return {
     rs: JSON.stringify(RS_LIST,null,2),
     bh: JSON.stringify(BH_LIST,null,2),
@@ -453,19 +487,23 @@ async function copy(t){try{await navigator.clipboard.writeText(t);}catch{}}
 copyRS.onclick=()=>copy(outRS.textContent);
 copyBH.onclick=()=>copy(outBH.textContent);
 
-/* ล้างทั้งหมด (RS/BH/Uploads/Processed) */
-function clearAll(){
-  RS_LIST.length=0; BH_LIST.length=0;
-  PROCESSED_FILES.clear();
-  UPLOADS.length=0;
-  persistAll();
-  outRS.textContent='[]'; outBH.textContent='[]';
-  renderUploads();
-}
+/* ปุ่ม “ล้างรายการ” (ในโมดัล) */
+resetBtn.onclick=(()=>{
+  const clearAll=()=>{
+    RS_LIST.length=0; BH_LIST.length=0;
+    if(window.SEEN_PACKS) window.SEEN_PACKS.clear();
+    PROCESSED_FILES.clear();
+    UPLOADS.length=0;
+    persistAll();
+    outRS.textContent='[]'; outBH.textContent='[]';
+    renderUploads();
+  };
+  return clearAll;
+})();
 
-resetBtn.onclick=clearAll;
+/* ปุ่ม “ล้างไฟล์” (ข้างปุ่มใหญ่) — ให้ทำงานเหมือน “ล้างรายการ” */
 clearFilesBtn.onclick=()=>{
-  clearAll();
+  resetBtn.onclick(); // reuse
   statusEl.textContent='ล้างข้อมูลทั้งหมดแล้ว';
   setTimeout(()=>statusEl.textContent='',1500);
 };
