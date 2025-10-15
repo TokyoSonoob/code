@@ -76,6 +76,21 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     background:none;
   }
+
+  /* === ปุ่มลบการ์ด X มุมขวาบน === */
+  #uploads .del{
+    position:absolute;top:6px;right:6px;
+    width:28px;height:28px;border-radius:9999px;
+    border:1px solid rgba(255,255,255,.25);
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff;font-weight:800;display:grid;place-items:center;line-height:1;
+    box-shadow:0 6px 18px rgba(239,68,68,.45), inset 0 0 0 1px rgba(255,255,255,.06);
+    cursor:pointer;transition:transform .12s ease, box-shadow .2s ease, opacity .2s ease;
+  }
+  #uploads .del:hover{transform:scale(1.05)}
+  #uploads .del:active{transform:scale(.96)}
+  #uploads .del span{font-size:18px;transform:translateY(-1px)}
+
   #uploads::-webkit-scrollbar{height:10px}
   #uploads::-webkit-scrollbar-thumb{background:#2a2750;border-radius:10px}
   #uploads::-webkit-scrollbar-track{background:#131129;border-radius:10px}
@@ -154,6 +169,7 @@
     #uploads{ grid-auto-columns:150px; gap:10px; padding:8px; }
     #uploads .thumb{ height:120px; }
     #uploads .name{ font-size:12px; padding:6px 8px 10px; }
+    #uploads .del{ width:30px; height:30px; top:5px; right:5px; }
     #big{ width:100%; min-width:unset; height:64px; }
     .status{ bottom:-22px; font-size:12px; }
     .neon{ padding:12px; border-radius:16px; }
@@ -254,7 +270,7 @@ function persistAll(){
 (function dedupeUploadsByName(){
   if (!Array.isArray(UPLOADS) || !UPLOADS.length) return;
   const seen = new Set();
-  for (let i = UPLOADS.length - 1; i >= 0; i--) { // เดินย้อนเพื่อคงใบแรกสุดไว้
+  for (let i = UPLOADS.length - 1; i >= 0; i--) {
     const key = (UPLOADS[i]?.name || '').replace(/§./g,'').trim().toLowerCase();
     if (seen.has(key)) UPLOADS.splice(i,1);
     else seen.add(key);
@@ -318,7 +334,7 @@ function findIconPath(zip, basePrefix){
   const candidates = [
     new RegExp(reBase+'pack_icon\\.png$', 'i'),
     new RegExp(reBase+'pack_icon\\.jpg$', 'i'),
-    new RegExp(reBase+'pack_icon\\.jpeg$', 'i'),
+       new RegExp(reBase+'pack_icon\\.jpeg$', 'i'),
     new RegExp(reBase+'textures/pack_icon\\.png$', 'i'),
   ];
   for(const rx of candidates){
@@ -336,18 +352,38 @@ async function toDataURLFromZip(zip, path){
   return `data:${mime};base64,${b64}`;
 }
 
-/* เรนเดอร์แกลเลอรี่ */
+/* ===== ปุ่มลบรายการในการ์ด ===== */
+function deleteUpload(index){
+  if(index<0 || index>=UPLOADS.length) return;
+  UPLOADS.splice(index,1);
+  persistAll();
+  renderUploads();
+  statusEl.textContent='ลบรายการแล้ว';
+  setTimeout(()=>statusEl.textContent='',1200);
+}
+
+/* เรนเดอร์แกลเลอรี่ (เพิ่มปุ่มลบ X) */
 function renderUploads(){
   uploadsEl.innerHTML = '';
   if(!UPLOADS.length){ uploadsEl.style.display='none'; return; }
   uploadsEl.style.display='grid';
-  for(const u of UPLOADS){
-    const card = document.createElement('div'); card.className='card';
-    const img = document.createElement('img'); img.className='thumb'; img.alt=u.name||'pack'; img.src=u.icon || '';
-    const name = document.createElement('div'); name.className='name'; name.textContent=u.name || 'ไม่ทราบชื่อ';
-    card.appendChild(img); card.appendChild(name);
+  UPLOADS.forEach((u,i)=>{
+    const card=document.createElement('div');card.className='card';
+
+    const del=document.createElement('button');
+    del.className='del'; del.type='button'; del.title='ลบรายการนี้'; del.setAttribute('aria-label','ลบรายการนี้');
+    del.innerHTML='<span>×</span>';
+    del.onclick=(ev)=>{ev.stopPropagation();deleteUpload(i);};
+    del.onkeydown=(ev)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();deleteUpload(i);}};
+
+    const img=document.createElement('img');img.className='thumb';img.alt=u.name||'pack';img.src=u.icon||'';
+    const name=document.createElement('div');name.className='name';name.textContent=u.name||'ไม่ทราบชื่อ';
+
+    card.appendChild(del);
+    card.appendChild(img);
+    card.appendChild(name);
     uploadsEl.appendChild(card);
-  }
+  });
 }
 renderUploads();
 
@@ -386,7 +422,6 @@ async function handleFiles(list){
   let files = Array.from(list||[]);
   if (!files.length) return;
 
-  // กันประมวลผลซ้ำระดับไฟล์
   files = files.filter(f => {
     const s = fileSig(f);
     if (PROCESSED_FILES.has(s)) return false;
@@ -394,7 +429,6 @@ async function handleFiles(list){
     return true;
   });
 
-  // ถ้าไม่มีไฟล์ใหม่ → เปิดโมดัลโชว์ผลสะสมทันที
   if (files.length === 0) { openModal(); return; }
 
   fade.className='fadecover show';
@@ -407,7 +441,6 @@ async function handleFiles(list){
         const t=await f.text();
         const manifest = await parseManifestText(t);
         await handleManifest(manifest, false);
-        // ไม่เพิ่มพรีวิว เพราะไม่มี icon ในไฟล์เดี่ยว
       }else if(isZipLike(f.name,f.type)){
         const zip=await JSZip.loadAsync(f);
         const topDirs = listTopLevelDirs(zip);
@@ -425,7 +458,6 @@ async function handleFiles(list){
             if(packId && iconPath){
               const dataUrl = await toDataURLFromZip(zip, iconPath);
               const name = (manifest?.header?.name)||dir.replace(/\/$/,'');
-              // quality: RS=2, BH=1
               addUploadEntry({ packId, name, icon:dataUrl, quality: isRS?2:1 });
             }
           }
@@ -451,7 +483,6 @@ async function handleFiles(list){
     }catch{}
   }
 
-  // บันทึกสถานะสะสม
   persistAll();
 
   setLoading(false);
@@ -491,18 +522,13 @@ async function handleManifest(obj, isRS){
 function buildJSON(){
   const fmt = (arr) => {
     const pretty = JSON.stringify(arr, null, 2);
-    // จับเฉพาะ "version": [ ... ] แล้วบีบให้เป็นบรรทัดเดียว
     return pretty.replace(/("version"\s*:\s*)\[\s*([\s\d,]+?)\s*\]/g, (_, p1, nums) => {
       const parts = nums.split(',').map(s=>s.trim()).filter(Boolean);
       return `${p1}[${parts.join(', ')}]`;
     });
   };
-  return {
-    rs: fmt(RS_LIST),
-    bh: fmt(BH_LIST),
-  };
+  return { rs: fmt(RS_LIST), bh: fmt(BH_LIST) };
 }
-
 async function typeOut(el,text){el.textContent='';const d=5;for(let i=0;i<text.length;i++){el.textContent+=text[i];if(i%3===0) await new Promise(r=>setTimeout(r,d));}}
 function openModal(){const {rs,bh}=buildJSON(); modal.classList.add('open'); typeOut(outRS,rs); typeOut(outBH,bh);}
 closeBtn.onclick=()=>modal.classList.remove('open');
@@ -516,7 +542,7 @@ resetBtn.onclick=(()=>{
   const clearAll=()=>{
     RS_LIST.length=0; BH_LIST.length=0;
     if(window.SEEN_PACKS) window.SEEN_PACKS.clear();
-    PROCESSED_FILES.clear();
+    PROCESSED_FILES.clear?.(); // เผื่อยังอยู่จากเวอร์ชันก่อน
     UPLOADS.length=0;
     persistAll();
     outRS.textContent='[]'; outBH.textContent='[]';
@@ -527,7 +553,7 @@ resetBtn.onclick=(()=>{
 
 /* ปุ่ม “ล้างไฟล์” (ข้างปุ่มใหญ่) — ให้ทำงานเหมือน “ล้างรายการ” */
 clearFilesBtn.onclick=()=>{
-  resetBtn.onclick(); // reuse
+  resetBtn.onclick();
   statusEl.textContent='ล้างข้อมูลทั้งหมดแล้ว';
   setTimeout(()=>statusEl.textContent='',1500);
 };
