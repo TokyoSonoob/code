@@ -351,49 +351,62 @@ async function toDataURLFromZip(zip, path){
   const b64 = await zip.file(path).async('base64');
   return `data:${mime};base64,${b64}`;
 }
+function syncListsToUploads(){
+  // เก็บ packId จากการ์ดที่ยังอยู่ ณ ปัจจุบัน
+  const keep = new Set(
+    UPLOADS
+      .map(u => (u && u.packId ? String(u.packId) : ''))
+      .filter(Boolean)
+  );
 
-/* ===== ปุ่มลบรายการในการ์ด ===== */
+  // ถ้าไม่มีการ์ดเลย ให้ลบทั้งหมด
+  const shouldKeep = keep.size > 0 ? (id)=>keep.has(String(id)) : ()=>false;
+
+  // กรอง RS/BH ให้คงเฉพาะที่ยังมีการ์ดอยู่
+  for (let i = RS_LIST.length - 1; i >= 0; i--){
+    if (!shouldKeep(RS_LIST[i].pack_id)) RS_LIST.splice(i, 1);
+  }
+  for (let i = BH_LIST.length - 1; i >= 0; i--){
+    if (!shouldKeep(BH_LIST[i].pack_id)) BH_LIST.splice(i, 1);
+  }
+
+  // รีบิลด์ชุดกันซ้ำสำหรับ parser
+  if (window.SEEN_PACKS){
+    window.SEEN_PACKS = new Set([
+      ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+      ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
+    ]);
+  }
+}
+
 function deleteUpload(index){
   if(index < 0 || index >= UPLOADS.length) return;
 
-  // ลบรายการที่เลือกออกจากอาร์เรย์ UPLOADS
+  // ลบการ์ดออกก่อน
   const removed = UPLOADS.splice(index, 1)[0];
 
-  // ถ้ามี packId → ลบ UUID ที่เกี่ยวข้องทั้ง RS และ BH
+  // ลบ UUID แบบเจาะจงถ้าทราบ packId
   if (removed && removed.packId){
     const pid = String(removed.packId);
-
-    // ลบทุกเวอร์ชันของแอดออนนี้ใน RS_LIST
     for (let i = RS_LIST.length - 1; i >= 0; i--){
-      if (String(RS_LIST[i].pack_id) === pid){
-        RS_LIST.splice(i, 1);
-      }
+      if (String(RS_LIST[i].pack_id) === pid) RS_LIST.splice(i, 1);
     }
-
-    // ลบทุกเวอร์ชันของแอดออนนี้ใน BH_LIST
     for (let i = BH_LIST.length - 1; i >= 0; i--){
-      if (String(BH_LIST[i].pack_id) === pid){
-        BH_LIST.splice(i, 1);
-      }
-    }
-
-    // รีเซ็ตชุดกันซ้ำ (SEEN_PACKS) ให้ตรงกับข้อมูลใหม่
-    if (window.SEEN_PACKS){
-      window.SEEN_PACKS = new Set([
-        ...RS_LIST.map(p => `RS|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
-        ...BH_LIST.map(p => `BH|${p.pack_id}|${Array.isArray(p.version)?p.version.join('.'):p.version}`),
-      ]);
+      if (String(BH_LIST[i].pack_id) === pid) BH_LIST.splice(i, 1);
     }
   }
 
-  // เซฟลง localStorage และรีเฟรช UI
+  // กันพลาด: ซิงค์ RS/BH ให้เหลือเฉพาะแอดออนที่ยังมีการ์ดอยู่
+  syncListsToUploads();
+
+  // เซฟ + รีเฟรช
   persistAll();
   renderUploads();
 
-  // แสดงสถานะชั่วคราว
-  statusEl.textContent = 'ลบแล้ว และล้าง UUID ทั้ง RS/BH';
+  statusEl.textContent = 'ลบแล้ว และล้าง UUID ทั้ง RS/BH ตามการ์ดที่เหลือ';
   setTimeout(()=>statusEl.textContent='',1500);
 }
+
 
 
 /* เรนเดอร์แกลเลอรี่ (เพิ่มปุ่มลบ X) */
